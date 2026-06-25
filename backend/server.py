@@ -24,11 +24,11 @@ from management import create_management_router
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-mongo_url = os.environ["MONGO_URL"]
+mongo_url = os.environ["MONGO_URL"].strip()
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+db = client[os.environ["DB_NAME"].strip()]
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "").strip()
 CLAUDE_MODEL = ("anthropic", "claude-sonnet-4-5-20250929")
 MAX_USER_TURNS = 12
 
