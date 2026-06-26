@@ -634,7 +634,7 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         otp_hash = hashlib.sha256(otp.encode()).hexdigest()
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
         
-        otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
+        otp_mode = (os.environ.get("OTP_MODE") or "development").strip().lower()
         node_env = (os.environ.get("NODE_ENV") or "").strip().lower()
         is_dev = (otp_mode == "development" and node_env != "production")
 
@@ -884,7 +884,7 @@ Expires:
             otp_hash = hashlib.sha256(otp.encode()).hexdigest()
             expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
             
-            otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
+            otp_mode = (os.environ.get("OTP_MODE") or "development").strip().lower()
             node_env = (os.environ.get("NODE_ENV") or "").strip().lower()
             is_dev = (otp_mode == "development" and node_env != "production")
             
