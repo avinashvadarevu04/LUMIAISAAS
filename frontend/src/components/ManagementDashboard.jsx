@@ -21,7 +21,9 @@ function Login({ onLogin }) {
   const [view, setView] = useState("signin"); // signin | signup | mobile | otp | profile | forgot | reset
   const [form, setForm] = useState({ email: "", password: "", name: "", confirmPassword: "", role: "CLIENT" });
   const [phoneForm, setPhoneForm] = useState({ phone: "", country_code: "+91" });
-  const [otpVal, setOtpVal] = useState("");
+  const [otpArray, setOtpArray] = useState(["", "", "", "", "", ""]);
+  const otpVal = otpArray.join("");
+  const [resetOtpArray, setResetOtpArray] = useState(["", "", "", "", "", ""]);
   const [profileForm, setProfileForm] = useState({ company_name: "" });
   const [resetForm, setResetForm] = useState({ otp: "", new_password: "" });
   const [loading, setLoading] = useState(false);
@@ -109,6 +111,7 @@ function Login({ onLogin }) {
         country_code: phoneForm.country_code
       });
       toast.success("Verification code sent to email and mobile!");
+      setOtpArray(["", "", "", "", "", ""]);
       setTimer(300);
       setResendCooldown(60);
       setView("otp");
@@ -174,6 +177,7 @@ function Login({ onLogin }) {
         country_code: phoneForm.country_code
       });
       toast.success("If the number is registered, an OTP code has been sent.");
+      setResetOtpArray(["", "", "", "", "", ""]);
       setTimer(300);
       setResendCooldown(60);
       setView("reset");
@@ -186,12 +190,17 @@ function Login({ onLogin }) {
 
   const submitResetPassword = async (e) => {
     e.preventDefault();
+    const resetOtpVal = resetOtpArray.join("");
+    if (resetOtpVal.length !== 6) {
+      toast.error("Please enter a 6-digit OTP code");
+      return;
+    }
     setLoading(true);
     try {
       await api.post("/auth/reset-password", {
         phone: phoneForm.phone,
         country_code: phoneForm.country_code,
-        otp: resetForm.otp,
+        otp: resetOtpVal,
         new_password: resetForm.new_password
       });
       toast.success("Password reset successfully! Please sign in.");
@@ -433,18 +442,50 @@ function Login({ onLogin }) {
               Enter the 6-digit code sent to your mobile: <strong className="text-[#2455ff]">{phoneForm.country_code} {phoneForm.phone}</strong>.
             </p>
             
-            <label className="mt-6 block text-xs font-semibold text-[#050a1a] text-center">
-              Verification Code
-              <input
-                required
-                type="text"
-                maxLength={6}
-                value={otpVal}
-                onChange={(e) => setOtpVal(e.target.value.replace(/\D/g, ""))}
-                placeholder="••••••"
-                className="mt-3 w-48 mx-auto block rounded-xl border bg-white/75 px-4 py-3 outline-none focus:ring-2 focus:ring-[#2455FF]/30 text-center font-mono text-xl tracking-[0.4em] font-bold"
-              />
-            </label>
+            <div className="mt-6 block text-xs font-semibold text-[#050a1a] text-center">
+              <span className="block mb-3">Verification Code</span>
+              <div 
+                className="flex justify-center gap-2 max-w-sm mx-auto" 
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                  const nextArray = [...otpArray];
+                  for (let i = 0; i < pastedData.length; i++) {
+                    nextArray[i] = pastedData[i];
+                  }
+                  setOtpArray(nextArray);
+                  const focusIdx = Math.min(pastedData.length, 5);
+                  document.getElementById(`otp-input-${focusIdx}`)?.focus();
+                }}
+              >
+                {otpArray.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`otp-input-${idx}`}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      const nextArray = [...otpArray];
+                      nextArray[idx] = val.slice(-1);
+                      setOtpArray(nextArray);
+                      if (val && idx < 5) {
+                        document.getElementById(`otp-input-${idx + 1}`)?.focus();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !otpArray[idx] && idx > 0) {
+                        document.getElementById(`otp-input-${idx - 1}`)?.focus();
+                      }
+                    }}
+                    className="w-11 h-11 text-center font-mono text-lg font-bold rounded-xl border bg-white/75 outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                  />
+                ))}
+              </div>
+            </div>
 
             <div className="mt-4 flex justify-between items-center text-xs">
               <span className="text-slate-400 font-mono">Expires in: {formatTime(timer)}</span>
@@ -581,18 +622,50 @@ function Login({ onLogin }) {
             <h1 className="font-cine text-3xl tracking-[.08em] text-[#050a1a]">Reset Password</h1>
             <p className="mt-1 text-sm text-[#050a1a]/55">Enter OTP received on your mobile and set a new password.</p>
             
-            <label className="mt-6 block text-xs font-semibold text-[#050a1a]">
-              OTP Code (6-digits)
-              <input
-                required
-                type="text"
-                maxLength={6}
-                value={resetForm.otp}
-                onChange={(e) => setResetForm({ ...resetForm, otp: e.target.value.replace(/\D/g, "") })}
-                placeholder="123456"
-                className="mt-2 w-full rounded-xl border bg-white/75 px-4 py-3 outline-none focus:ring-2 focus:ring-[#2455FF]/30 text-sm font-mono tracking-[0.1em]"
-              />
-            </label>
+            <div className="mt-6 block text-xs font-semibold text-[#050a1a] text-center">
+              <span className="block mb-3 text-left">OTP Code (6-digits)</span>
+              <div 
+                className="flex justify-center gap-2 max-w-sm mx-auto" 
+                onPaste={(e) => {
+                  e.preventDefault();
+                  const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+                  const nextArray = [...resetOtpArray];
+                  for (let i = 0; i < pastedData.length; i++) {
+                    nextArray[i] = pastedData[i];
+                  }
+                  setResetOtpArray(nextArray);
+                  const focusIdx = Math.min(pastedData.length, 5);
+                  document.getElementById(`reset-otp-input-${focusIdx}`)?.focus();
+                }}
+              >
+                {resetOtpArray.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    id={`reset-otp-input-${idx}`}
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "");
+                      const nextArray = [...resetOtpArray];
+                      nextArray[idx] = val.slice(-1);
+                      setResetOtpArray(nextArray);
+                      if (val && idx < 5) {
+                        document.getElementById(`reset-otp-input-${idx + 1}`)?.focus();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !resetOtpArray[idx] && idx > 0) {
+                        document.getElementById(`reset-otp-input-${idx - 1}`)?.focus();
+                      }
+                    }}
+                    className="w-11 h-11 text-center font-mono text-lg font-bold rounded-xl border bg-white/75 outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                  />
+                ))}
+              </div>
+            </div>
 
             <label className="mt-4 block text-xs font-semibold text-[#050a1a]">
               New Password

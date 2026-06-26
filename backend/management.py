@@ -365,25 +365,118 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         await db.otps.create_index("email")
 
     async def send_sms_otp(phone: str, otp: str) -> bool:
-        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
-        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
-        twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
+        provider = (os.environ.get("SMS_PROVIDER") or "twilio").strip().lower()
+        message_body = f"[LUMI AI] Your verification code is: {otp}. Valid for 5 minutes."
         
-        if twilio_sid and twilio_token and twilio_phone:
-            try:
-                from twilio.rest import Client
-                import asyncio
-                client = Client(twilio_sid, twilio_token)
-                message = await asyncio.to_thread(
-                    client.messages.create,
-                    body=f"[LUMI AI] Your verification code is: {otp}. Valid for 5 minutes.",
-                    from_=twilio_phone,
-                    to=phone
-                )
-                print(f"Twilio OTP sent: {message.sid}")
-                return True
-            except Exception as e:
-                print(f"Twilio SMS delivery failed: {e}")
+        import asyncio
+        import requests
+        
+        if provider == "twilio":
+            twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+            twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+            twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
+            if twilio_sid and twilio_token and twilio_phone:
+                try:
+                    from twilio.rest import Client
+                    client = Client(twilio_sid, twilio_token)
+                    message = await asyncio.to_thread(
+                        client.messages.create,
+                        body=message_body,
+                        from_=twilio_phone,
+                        to=phone
+                    )
+                    print(f"Twilio OTP sent: {message.sid}")
+                    return True
+                except Exception as e:
+                    print(f"Twilio SMS delivery failed: {e}")
+            else:
+                print("Twilio credentials not fully configured.")
+                
+        elif provider == "msg91":
+            authkey = os.environ.get("MSG91_AUTH_KEY")
+            template_id = os.environ.get("MSG91_TEMPLATE_ID")
+            if authkey and template_id:
+                try:
+                    clean_phone = phone.replace("+", "").replace(" ", "")
+                    url = f"https://api.msg91.com/api/v5/otp/send?template_id={template_id}&mobile={clean_phone}&authkey={authkey}&otp={otp}"
+                    res = await asyncio.to_thread(requests.post, url, json={})
+                    print(f"MSG91 OTP sent response: {res.text}")
+                    return res.status_code == 200
+                except Exception as e:
+                    print(f"MSG91 SMS delivery failed: {e}")
+            else:
+                print("MSG91 credentials not fully configured.")
+                
+        elif provider == "exotel":
+            api_key = os.environ.get("EXOTEL_API_KEY")
+            api_token = os.environ.get("EXOTEL_API_TOKEN")
+            account_sid = os.environ.get("EXOTEL_ACCOUNT_SID")
+            sender_id = os.environ.get("EXOTEL_SENDER_ID", "LUPUSA")
+            if api_key and api_token and account_sid:
+                try:
+                    url = f"https://api.exotel.com/v1/Accounts/{account_sid}/Sms/send.json"
+                    auth = (api_key, api_token)
+                    payload = {
+                        "From": sender_id,
+                        "To": phone,
+                        "Body": message_body
+                    }
+                    res = await asyncio.to_thread(requests.post, url, data=payload, auth=auth)
+                    print(f"Exotel OTP sent response: {res.text}")
+                    return res.status_code == 200
+                except Exception as e:
+                    print(f"Exotel SMS delivery failed: {e}")
+            else:
+                print("Exotel credentials not fully configured.")
+                
+        elif provider == "vonage":
+            api_key = os.environ.get("VONAGE_API_KEY")
+            api_secret = os.environ.get("VONAGE_API_SECRET")
+            sender_id = os.environ.get("VONAGE_SENDER_ID", "LUPUSA")
+            if api_key and api_secret:
+                try:
+                    url = "https://rest.nexmo.com/sms/json"
+                    payload = {
+                        "api_key": api_key,
+                        "api_secret": api_secret,
+                        "to": phone.replace("+", ""),
+                        "from": sender_id,
+                        "text": message_body
+                    }
+                    res = await asyncio.to_thread(requests.post, url, json=payload)
+                    print(f"Vonage OTP sent response: {res.text}")
+                    return res.status_code == 200
+                except Exception as e:
+                    print(f"Vonage SMS delivery failed: {e}")
+            else:
+                print("Vonage credentials not fully configured.")
+                
+        elif provider == "aws_sns":
+            aws_key = os.environ.get("AWS_ACCESS_KEY_ID")
+            aws_secret = os.environ.get("AWS_SECRET_ACCESS_KEY")
+            aws_region = os.environ.get("AWS_REGION", "us-east-1")
+            if aws_key and aws_secret:
+                try:
+                    import boto3
+                    client = await asyncio.to_thread(
+                        boto3.client,
+                        "sns",
+                        aws_access_key_id=aws_key,
+                        aws_secret_access_key=aws_secret,
+                        region_name=aws_region
+                    )
+                    publish_args = {
+                        "PhoneNumber": phone,
+                        "Message": message_body
+                    }
+                    response = await asyncio.to_thread(client.publish, **publish_args)
+                    print(f"AWS SNS OTP sent response ID: {response.get('MessageId')}")
+                    return True
+                except Exception as e:
+                    print(f"AWS SNS SMS delivery failed: {e}")
+            else:
+                print("AWS SNS credentials not fully configured.")
+                
         print(f"--- [SMS SIMULATOR] Send OTP: {otp} to {phone} ---")
         return False
 
@@ -491,6 +584,42 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         if len(phone_digits) < 5:
             raise HTTPException(400, "Invalid phone number format")
             
+        # Check duplicate verified phone numbers
+        dup = await db.users.find_one({
+            "phone": phone_digits, 
+            "country_code": payload.country_code, 
+            "mobile_verified": True
+        })
+        if dup and dup["email"] != email:
+            raise HTTPException(400, "This mobile number is already registered to another account.")
+            
+        # Check existing OTP for resend limits
+        existing_otp = await db.otps.find_one({"email": email})
+        resend_count = 0
+        if existing_otp:
+            # Check 60-second cooldown
+            last_sent = datetime.fromisoformat(existing_otp["createdAt"])
+            if datetime.now(timezone.utc) - last_sent < timedelta(seconds=60):
+                raise HTTPException(429, "Please wait 60 seconds before requesting a new OTP.")
+                
+            resend_count = existing_otp.get("resends", 0)
+            first_sent_at_str = existing_otp.get("firstSentAt", existing_otp["createdAt"])
+            first_sent = datetime.fromisoformat(first_sent_at_str)
+            
+            # Check maximum 5 resends within 1 hour
+            if resend_count >= 5:
+                if datetime.now(timezone.utc) - first_sent < timedelta(hours=1):
+                    raise HTTPException(429, "Maximum resend attempts reached for this hour. Please try again later.")
+                else:
+                    # Reset resends if 1 hour has passed since first request
+                    resend_count = 0
+                    first_sent_at_str = now()
+            else:
+                resend_count += 1
+        else:
+            first_sent_at_str = now()
+
+        # Update user record
         await db.users.update_one(
             {"email": email},
             {"$set": {
@@ -513,12 +642,29 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
             "otpHash": otp_hash,
             "expiresAt": expires_at,
             "attempts": 0,
-            "resends": 0,
+            "resends": resend_count,
+            "firstSentAt": first_sent_at_str,
             "createdAt": now()
         }
         if email.endswith("@example.com") or email.endswith("@lupus.ai"):
             otp_rec["otp_test_bypass"] = otp
         await db.otps.insert_one(otp_rec)
+        
+        # Record resend/send in audit log
+        await db.activity_logs.insert_one({
+            "id": uid(),
+            "userId": user["id"],
+            "userName": user["name"],
+            "role": user["role"],
+            "action": "OTP_SENT_RESENT" if resend_count > 0 else "OTP_SENT",
+            "entityType": "USER",
+            "entityId": user["id"],
+            "metadata": {
+                "phone": f"{payload.country_code} {phone_digits}",
+                "resends": resend_count
+            },
+            "createdAt": now()
+        })
         
         full_phone = f"{payload.country_code}{phone_digits}"
         await send_sms_otp(full_phone, otp)
@@ -537,19 +683,38 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         if not otp_record:
             raise HTTPException(400, "No active OTP found. Please request a new one.")
             
+        # Check if temporarily blocked
+        if "blockedUntil" in otp_record:
+            blocked_until = datetime.fromisoformat(otp_record["blockedUntil"])
+            if datetime.now(timezone.utc) < blocked_until:
+                diff = blocked_until - datetime.now(timezone.utc)
+                mins = int(diff.total_seconds() // 60) + 1
+                raise HTTPException(429, f"Too many failed attempts. Verification is blocked for {mins} minutes.")
+            else:
+                # Block has expired, delete the block
+                await db.otps.update_one({"email": email}, {"$unset": {"blockedUntil": ""}})
+                otp_record.pop("blockedUntil", None)
+
         if otp_record.get("attempts", 0) >= 5:
-            raise HTTPException(429, "Too many failed attempts. Please request a new OTP.")
+            blocked_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+            await db.otps.update_one({"email": email}, {"$set": {"blockedUntil": blocked_until}})
+            raise HTTPException(429, "Too many failed attempts. Verification is blocked for 15 minutes.")
             
         await db.otps.update_one({"email": email}, {"$inc": {"attempts": 1}})
         
         expiry = datetime.fromisoformat(otp_record["expiresAt"])
         if expiry < datetime.now(timezone.utc):
             await db.otps.delete_one({"email": email})
-            raise HTTPException(400, "OTP has expired. Please request a new one.")
+            raise HTTPException(400, "OTP expired. Please request a new OTP.")
             
         payload_hash = hashlib.sha256(payload.otp.encode()).hexdigest()
         if payload_hash != otp_record["otpHash"]:
-            raise HTTPException(400, "Invalid OTP code.")
+            current_attempts = otp_record.get("attempts", 0) + 1
+            if current_attempts >= 5:
+                blocked_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+                await db.otps.update_one({"email": email}, {"$set": {"blockedUntil": blocked_until}})
+                raise HTTPException(429, "Too many failed attempts. Verification is blocked for 15 minutes.")
+            raise HTTPException(400, "Invalid OTP. Please try again.")
             
         await db.otps.delete_one({"email": email})
         
@@ -733,19 +898,38 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         if not otp_record:
             raise HTTPException(400, "Invalid request details or OTP.")
             
+        # Check if temporarily blocked
+        if "blockedUntil" in otp_record:
+            blocked_until = datetime.fromisoformat(otp_record["blockedUntil"])
+            if datetime.now(timezone.utc) < blocked_until:
+                diff = blocked_until - datetime.now(timezone.utc)
+                mins = int(diff.total_seconds() // 60) + 1
+                raise HTTPException(429, f"Too many failed attempts. Verification is blocked for {mins} minutes.")
+            else:
+                # Block has expired, delete the block
+                await db.otps.update_one({"email": user["email"]}, {"$unset": {"blockedUntil": ""}})
+                otp_record.pop("blockedUntil", None)
+
         if otp_record.get("attempts", 0) >= 5:
-            raise HTTPException(429, "Too many failed attempts. Please request a new OTP.")
+            blocked_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+            await db.otps.update_one({"email": user["email"]}, {"$set": {"blockedUntil": blocked_until}})
+            raise HTTPException(429, "Too many failed attempts. Verification is blocked for 15 minutes.")
             
         await db.otps.update_one({"email": user["email"]}, {"$inc": {"attempts": 1}})
         
         expiry = datetime.fromisoformat(otp_record["expiresAt"])
         if expiry < datetime.now(timezone.utc):
             await db.otps.delete_one({"email": user["email"]})
-            raise HTTPException(400, "OTP has expired. Please request a new one.")
+            raise HTTPException(400, "OTP expired. Please request a new OTP.")
             
         payload_hash = hashlib.sha256(payload.otp.encode()).hexdigest()
         if payload_hash != otp_record["otpHash"]:
-            raise HTTPException(400, "Invalid OTP code.")
+            current_attempts = otp_record.get("attempts", 0) + 1
+            if current_attempts >= 5:
+                blocked_until = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+                await db.otps.update_one({"email": user["email"]}, {"$set": {"blockedUntil": blocked_until}})
+                raise HTTPException(429, "Too many failed attempts. Verification is blocked for 15 minutes.")
+            raise HTTPException(400, "Invalid OTP. Please try again.")
             
         await db.otps.delete_one({"email": user["email"]})
         
