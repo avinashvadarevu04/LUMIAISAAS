@@ -53,6 +53,55 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=8, max_length=128)
 
 
+class RegisterIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=5, max_length=200)
+    password: str = Field(min_length=8, max_length=128)
+    role: str = Field(pattern="^(CLIENT|DEVELOPER)$")
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value):
+            raise ValueError("Enter a valid email address")
+        return value
+
+
+class SendOtpIn(BaseModel):
+    email: str
+    phone: str = Field(min_length=5, max_length=20)
+    country_code: str = Field(min_length=2, max_length=6)
+
+
+class VerifyOtpIn(BaseModel):
+    email: str
+    otp: str = Field(min_length=6, max_length=6)
+
+
+class CompleteProfileIn(BaseModel):
+    email: str
+    company_name: Optional[str] = ""
+    profile_picture_url: Optional[str] = ""
+
+
+class ForgotPasswordIn(BaseModel):
+    phone: str = Field(min_length=5, max_length=20)
+    country_code: str = Field(min_length=2, max_length=6)
+
+
+class ResetPasswordIn(BaseModel):
+    phone: str = Field(min_length=5, max_length=20)
+    country_code: str = Field(min_length=2, max_length=6)
+    otp: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class RefreshIn(BaseModel):
+    refresh_token: Optional[str] = None
+
+
+
 class PersonIn(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(min_length=5, max_length=200)
@@ -227,10 +276,19 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
     def token_for(user: dict) -> str:
         payload = {
             "sub": user["id"], "role": user["role"],
-            "exp": datetime.now(timezone.utc) + timedelta(hours=8),
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
             "iat": datetime.now(timezone.utc),
         }
         return jwt.encode(payload, secret, algorithm="HS256")
+
+    def refresh_token_for(user_id: str) -> str:
+        payload = {
+            "sub": user_id,
+            "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            "iat": datetime.now(timezone.utc),
+        }
+        return jwt.encode(payload, secret, algorithm="HS256")
+
 
     async def ensure_admin() -> dict:
         email = (admin_email or "admin@lupusailabs.com").lower()
@@ -303,15 +361,484 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         await db.milestone_submissions.create_index("milestoneId")
         await db.milestone_approvals.create_index([("milestoneId", 1), ("createdAt", 1)])
         await db.activity_logs.create_index([("entityType", 1), ("entityId", 1), ("createdAt", -1)])
+        await db.refresh_tokens.create_index("token", unique=True)
+        await db.otps.create_index("email")
+
+    async def send_sms_otp(phone: str, otp: str) -> bool:
+        twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+        twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+        twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
+        
+        if twilio_sid and twilio_token and twilio_phone:
+            try:
+                from twilio.rest import Client
+                import asyncio
+                client = Client(twilio_sid, twilio_token)
+                message = await asyncio.to_thread(
+                    client.messages.create,
+                    body=f"[LUMI AI] Your verification code is: {otp}. Valid for 5 minutes.",
+                    from_=twilio_phone,
+                    to=phone
+                )
+                print(f"Twilio OTP sent: {message.sid}")
+                return True
+            except Exception as e:
+                print(f"Twilio SMS delivery failed: {e}")
+        print(f"--- [SMS SIMULATOR] Send OTP: {otp} to {phone} ---")
+        return False
+
+    async def send_email_otp(email: str, name: str, otp: str):
+        resend_api_key = os.environ.get("RESEND_API_KEY", "")
+        if resend_api_key:
+            try:
+                import resend
+                import asyncio
+                resend.api_key = resend_api_key
+                params = {
+                    "from": os.environ.get("SENDER_EMAIL", "onboarding@resend.dev"),
+                    "to": [email],
+                    "subject": f"[LUMI AI] Verification Code: {otp}",
+                    "html": f"""
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e4e4e7; border-radius: 8px;">
+                        <h2 style="color: #2455FF;">Verify Your Account</h2>
+                        <p>Hello {name},</p>
+                        <p>Thank you for signing up at LUMI AI Labs. Please use the following 6-digit verification code to complete your registration:</p>
+                        <div style="background-color: #f4f4f5; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #09090b; border-radius: 4px; margin: 20px 0;">
+                            {otp}
+                        </div>
+                        <p style="font-size: 12px; color: #71717a;">This code will expire in 5 minutes. If you did not request this, please ignore this email.</p>
+                    </div>
+                    """
+                }
+                await asyncio.to_thread(resend.Emails.send, params)
+                print(f"Resend OTP email sent to {email}")
+            except Exception as e:
+                print(f"Failed to send email OTP via Resend: {e}")
 
     @router.post("/auth/login")
-    async def login(payload: LoginIn):
+    async def login(payload: LoginIn, response: Response):
         await ensure_admin()
-        user = await db.users.find_one({"email": payload.email.strip().lower()}, {"_id": 0})
-        valid = user and bcrypt.checkpw(payload.password.encode(), user.get("passwordHash", "").encode())
-        if not valid or user.get("status") != "ACTIVE":
+        user = await db.users.find_one({"email": payload.email.strip().lower()})
+        if not user:
             raise HTTPException(401, "Invalid email or password")
-        return {"accessToken": token_for(user), "user": public_user(user)}
+        valid = bcrypt.checkpw(payload.password.encode(), user.get("passwordHash", "").encode())
+        if not valid:
+            raise HTTPException(401, "Invalid email or password")
+            
+        if user.get("status") == "PENDING_VERIFICATION" or not user.get("mobile_verified"):
+            return {"status": "PENDING_VERIFICATION", "email": user["email"]}
+            
+        # Standard login flow
+        access_token = token_for(user)
+        refresh_token = refresh_token_for(user["id"])
+        
+        await db.refresh_tokens.delete_many({"userId": user["id"]})
+        await db.refresh_tokens.insert_one({
+            "id": uid(),
+            "token": refresh_token,
+            "userId": user["id"],
+            "expiresAt": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "createdAt": now()
+        })
+        
+        response.set_cookie(
+            key="refreshToken",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7*24*60*60
+        )
+        
+        return {"accessToken": access_token, "refreshToken": refresh_token, "user": public_user(user)}
+
+    @router.post("/auth/register")
+    async def register(payload: RegisterIn):
+        email = payload.email.strip().lower()
+        existing = await db.users.find_one({"email": email})
+        if existing:
+            raise HTTPException(409, "An account already exists for this email")
+            
+        stamp = now()
+        user_id = uid()
+        
+        user = {
+            "id": user_id,
+            "name": payload.name.strip(),
+            "email": email,
+            "passwordHash": bcrypt.hashpw(payload.password.encode(), bcrypt.gensalt()).decode(),
+            "role": payload.role,
+            "company": "",
+            "status": "PENDING_VERIFICATION",
+            "phone": "",
+            "country_code": "",
+            "mobile_verified": False,
+            "createdAt": stamp,
+            "updatedAt": stamp
+        }
+        await db.users.insert_one(user.copy())
+        
+        return {"ok": True, "email": email, "userId": user_id}
+
+    @router.post("/auth/send-otp")
+    async def send_otp(payload: SendOtpIn):
+        email = payload.email.strip().lower()
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(404, "User not found")
+            
+        phone_digits = "".join(ch for ch in payload.phone if ch.isdigit())
+        if len(phone_digits) < 5:
+            raise HTTPException(400, "Invalid phone number format")
+            
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "phone": phone_digits,
+                "country_code": payload.country_code,
+                "updatedAt": now()
+            }}
+        )
+        
+        import random
+        otp = f"{random.randint(100000, 999999)}"
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+        
+        await db.otps.delete_many({"email": email})
+        await db.otps.insert_one({
+            "id": uid(),
+            "email": email,
+            "phone": f"{payload.country_code} {phone_digits}",
+            "otpHash": otp_hash,
+            "expiresAt": expires_at,
+            "attempts": 0,
+            "resends": 0,
+            "createdAt": now()
+        })
+        
+        full_phone = f"{payload.country_code}{phone_digits}"
+        await send_sms_otp(full_phone, otp)
+        await send_email_otp(email, user["name"], otp)
+        
+        return {"ok": True, "email": email, "phone": phone_digits}
+
+    @router.post("/auth/verify-otp")
+    async def verify_otp(payload: VerifyOtpIn, response: Response):
+        email = payload.email.strip().lower()
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(404, "User not found")
+            
+        otp_record = await db.otps.find_one({"email": email})
+        if not otp_record:
+            raise HTTPException(400, "No active OTP found. Please request a new one.")
+            
+        if otp_record.get("attempts", 0) >= 5:
+            raise HTTPException(429, "Too many failed attempts. Please request a new OTP.")
+            
+        await db.otps.update_one({"email": email}, {"$inc": {"attempts": 1}})
+        
+        expiry = datetime.fromisoformat(otp_record["expiresAt"])
+        if expiry < datetime.now(timezone.utc):
+            await db.otps.delete_one({"email": email})
+            raise HTTPException(400, "OTP has expired. Please request a new one.")
+            
+        payload_hash = hashlib.sha256(payload.otp.encode()).hexdigest()
+        if payload_hash != otp_record["otpHash"]:
+            raise HTTPException(400, "Invalid OTP code.")
+            
+        await db.otps.delete_one({"email": email})
+        
+        stamp = now()
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "status": "ACTIVE",
+                "mobile_verified": True,
+                "verificationTimestamp": stamp,
+                "updatedAt": stamp
+            }}
+        )
+        
+        user = await db.users.find_one({"email": email})
+        
+        profile_collection = db.clients if user["role"] == Role.CLIENT.value else db.developers
+        profile = await profile_collection.find_one({"userId": user["id"]})
+        if not profile:
+            await profile_collection.insert_one({
+                "id": uid(),
+                "userId": user["id"],
+                "createdAt": stamp,
+                "updatedAt": stamp
+            })
+            
+        settings = await db.user_settings.find_one({"userId": user["id"]})
+        if not settings:
+            await db.user_settings.insert_one({
+                "id": uid(),
+                "userId": user["id"],
+                "theme": "light",
+                "emailNotifications": True,
+                "smsNotifications": True,
+                "createdAt": stamp,
+                "updatedAt": stamp
+            })
+            
+        prefs = await db.notification_preferences.find_one({"userId": user["id"]})
+        if not prefs:
+            await db.notification_preferences.insert_one({
+                "id": uid(),
+                "userId": user["id"],
+                "channels": ["email", "sms"],
+                "events": ["NEW_PROJECT", "NEW_PRD", "MILESTONE_SUBMITTED", "MILESTONE_APPROVED"],
+                "createdAt": stamp,
+                "updatedAt": stamp
+            })
+            
+        dash = await db.dashboard_config.find_one({"userId": user["id"]})
+        if not dash:
+            await db.dashboard_config.insert_one({
+                "id": uid(),
+                "userId": user["id"],
+                "layout": "default",
+                "widgets": ["activeProjects", "pendingReviews", "revenue" if user["role"] == "SUPER_ADMIN" else "tasks"],
+                "createdAt": stamp,
+                "updatedAt": stamp
+            })
+            
+        await db.activity_logs.insert_one({
+            "id": uid(),
+            "userId": user["id"],
+            "userName": user["name"],
+            "role": user["role"],
+            "action": "USER_REGISTERED_AND_VERIFIED",
+            "entityType": "USER",
+            "entityId": user["id"],
+            "metadata": {"ipAddress": "", "userAgent": ""},
+            "createdAt": stamp
+        })
+        
+        perms = await db.permissions.find_one({"userId": user["id"]})
+        if not perms:
+            scopes = []
+            if user["role"] == Role.SUPER_ADMIN.value:
+                scopes = ["admin:all", "projects:all", "people:all", "finance:all", "documents:all"]
+            elif user["role"] == Role.DEVELOPER.value:
+                scopes = ["developer:assigned", "tasks:write", "milestones:submit", "notes:write"]
+            elif user["role"] == Role.CLIENT.value:
+                scopes = ["client:owned", "change_requests:write", "invoices:pay", "comments:write"]
+            await db.permissions.insert_one({
+                "id": uid(),
+                "userId": user["id"],
+                "role": user["role"],
+                "scopes": scopes,
+                "createdAt": stamp,
+                "updatedAt": stamp
+            })
+            
+        access_token = token_for(user)
+        refresh_token = refresh_token_for(user["id"])
+        
+        await db.refresh_tokens.delete_many({"userId": user["id"]})
+        await db.refresh_tokens.insert_one({
+            "id": uid(),
+            "token": refresh_token,
+            "userId": user["id"],
+            "expiresAt": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "createdAt": now()
+        })
+        
+        response.set_cookie(
+            key="refreshToken",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7*24*60*60
+        )
+        
+        return {"accessToken": access_token, "refreshToken": refresh_token, "user": public_user(user)}
+
+    @router.post("/auth/complete-profile")
+    async def complete_profile(payload: CompleteProfileIn):
+        email = payload.email.strip().lower()
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(404, "User not found")
+            
+        company = payload.company_name.strip() if payload.company_name else ""
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {
+                "company": company,
+                "updatedAt": now()
+            }}
+        )
+        
+        if user["role"] == Role.CLIENT.value:
+            await db.clients.update_one(
+                {"userId": user["id"]},
+                {"$set": {
+                    "companyName": company,
+                    "updatedAt": now()
+                }}
+            )
+            
+        return {"ok": True}
+
+    @router.post("/auth/forgot-password")
+    async def forgot_password(payload: ForgotPasswordIn):
+        phone_digits = "".join(ch for ch in payload.phone if ch.isdigit())
+        full_phone = f"{payload.country_code} {phone_digits}"
+        
+        user = await db.users.find_one({"phone": phone_digits, "country_code": payload.country_code})
+        if user:
+            import random
+            otp = f"{random.randint(100000, 999999)}"
+            otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+            expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
+            
+            await db.otps.delete_many({"email": user["email"]})
+            await db.otps.insert_one({
+                "id": uid(),
+                "email": user["email"],
+                "phone": full_phone,
+                "otpHash": otp_hash,
+                "expiresAt": expires_at,
+                "attempts": 0,
+                "resends": 0,
+                "createdAt": now()
+            })
+            
+            await send_sms_otp(f"{payload.country_code}{phone_digits}", otp)
+            await send_email_otp(user["email"], user["name"], otp)
+            
+        return {"ok": True, "message": "If the phone number is registered, an OTP code has been sent."}
+
+    @router.post("/auth/reset-password")
+    async def reset_password(payload: ResetPasswordIn):
+        phone_digits = "".join(ch for ch in payload.phone if ch.isdigit())
+        user = await db.users.find_one({"phone": phone_digits, "country_code": payload.country_code})
+        if not user:
+            raise HTTPException(400, "Invalid request details or OTP.")
+            
+        otp_record = await db.otps.find_one({"email": user["email"]})
+        if not otp_record:
+            raise HTTPException(400, "Invalid request details or OTP.")
+            
+        if otp_record.get("attempts", 0) >= 5:
+            raise HTTPException(429, "Too many failed attempts. Please request a new OTP.")
+            
+        await db.otps.update_one({"email": user["email"]}, {"$inc": {"attempts": 1}})
+        
+        expiry = datetime.fromisoformat(otp_record["expiresAt"])
+        if expiry < datetime.now(timezone.utc):
+            await db.otps.delete_one({"email": user["email"]})
+            raise HTTPException(400, "OTP has expired. Please request a new one.")
+            
+        payload_hash = hashlib.sha256(payload.otp.encode()).hexdigest()
+        if payload_hash != otp_record["otpHash"]:
+            raise HTTPException(400, "Invalid OTP code.")
+            
+        await db.otps.delete_one({"email": user["email"]})
+        
+        password_hash = bcrypt.hashpw(payload.new_password.encode(), bcrypt.gensalt()).decode()
+        await db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {
+                "passwordHash": password_hash,
+                "updatedAt": now()
+            }}
+        )
+        
+        await db.activity_logs.insert_one({
+            "id": uid(),
+            "userId": user["id"],
+            "userName": user["name"],
+            "role": user["role"],
+            "action": "USER_RESET_PASSWORD",
+            "entityType": "USER",
+            "entityId": user["id"],
+            "metadata": {},
+            "createdAt": now()
+        })
+        
+        return {"ok": True}
+
+    @router.post("/auth/refresh")
+    async def refresh_token_route(payload: RefreshIn, response: Response, refresh_token_cookie: Optional[str] = Header(default=None, alias="Cookie")):
+        token = payload.refresh_token
+        if not token and refresh_token_cookie:
+            matches = re.search(r"refreshToken=([^;]+)", refresh_token_cookie)
+            if matches:
+                token = matches.group(1)
+        
+        if not token:
+            raise HTTPException(401, "Refresh token required")
+            
+        try:
+            claims = jwt.decode(token, secret, algorithms=["HS256"])
+        except jwt.PyJWTError:
+            raise HTTPException(401, "Refresh token is invalid or expired")
+            
+        user_id = claims.get("sub")
+        db_token = await db.refresh_tokens.find_one({"token": token, "userId": user_id})
+        if not db_token:
+            raise HTTPException(401, "Refresh token not recognized")
+            
+        expiry = datetime.fromisoformat(db_token["expiresAt"])
+        if expiry < datetime.now(timezone.utc):
+            await db.refresh_tokens.delete_one({"token": token})
+            raise HTTPException(401, "Refresh token expired")
+            
+        new_refresh = refresh_token_for(user_id)
+        await db.refresh_tokens.delete_one({"token": token})
+        await db.refresh_tokens.insert_one({
+            "id": uid(),
+            "token": new_refresh,
+            "userId": user_id,
+            "expiresAt": (datetime.now(timezone.utc) + timedelta(days=7)).isoformat(),
+            "createdAt": now()
+        })
+        
+        user = await db.users.find_one({"id": user_id})
+        if not user or user.get("status") != "ACTIVE":
+            raise HTTPException(401, "User is no longer active")
+            
+        new_access = jwt.encode({
+            "sub": user["id"], "role": user["role"],
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=15),
+            "iat": datetime.now(timezone.utc),
+        }, secret, algorithm="HS256")
+        
+        response.set_cookie(
+            key="refreshToken",
+            value=new_refresh,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=7*24*60*60
+        )
+        return {"accessToken": new_access, "refreshToken": new_refresh, "user": public_user(user)}
+
+    @router.post("/auth/logout")
+    async def logout_route(payload: RefreshIn, response: Response, refresh_token_cookie: Optional[str] = Header(default=None, alias="Cookie")):
+        token = payload.refresh_token
+        if not token and refresh_token_cookie:
+            matches = re.search(r"refreshToken=([^;]+)", refresh_token_cookie)
+            if matches:
+                token = matches.group(1)
+        if token:
+            await db.refresh_tokens.delete_one({"token": token})
+        response.delete_cookie("refreshToken")
+        return {"ok": True}
+
+    @router.post("/auth/logout-all")
+    async def logout_all(user: dict = Depends(current_user)):
+        await db.refresh_tokens.delete_many({"userId": user["id"]})
+        return {"ok": True}
+
 
     @router.get("/me")
     async def me(user: dict = Depends(current_user)):

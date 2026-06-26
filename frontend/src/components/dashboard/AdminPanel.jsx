@@ -18,7 +18,7 @@ const money = (value = 0) => new Intl.NumberFormat("en-IN", { style: "currency",
 const titleCase = (value = "") => value.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default function AdminPanel({ user, data, loadData, activeTab }) {
-  const [adminPwd, setAdminPwd] = useState(() => sessionStorage.getItem("lumi.admin.pwd.v1") || "lumi2025");
+  const [adminPwd, setAdminPwd] = useState(() => localStorage.getItem("lumi.admin.pwd.v1") || "lumi2025");
   const [prdQueue, setPrdQueue] = useState([]);
   const [selectedPrd, setSelectedPrd] = useState(null);
   const [projectFilter, setProjectFilter] = useState("");
