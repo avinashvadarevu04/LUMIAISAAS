@@ -635,7 +635,7 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
         
         otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
-        node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+        node_env = (os.environ.get("NODE_ENV") or "").strip().lower()
         is_dev = (otp_mode == "development" and node_env != "production")
 
         await db.otps.delete_many({"email": email})
@@ -885,7 +885,7 @@ Expires:
             expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
             
             otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
-            node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+            node_env = (os.environ.get("NODE_ENV") or "").strip().lower()
             is_dev = (otp_mode == "development" and node_env != "production")
             
             await db.otps.delete_many({"email": user["email"]})

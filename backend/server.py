@@ -895,7 +895,7 @@ async def get_document(doc_id: str):
 @api_router.get("/debug/latest-otp")
 async def get_latest_otp():
     otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
-    node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+    node_env = (os.environ.get("NODE_ENV") or "").strip().lower()
     if otp_mode == "production" or node_env == "production":
         raise HTTPException(status_code=403, detail="Debug endpoints are disabled in production mode.")
         
