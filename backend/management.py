@@ -634,6 +634,10 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         otp_hash = hashlib.sha256(otp.encode()).hexdigest()
         expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
         
+        otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
+        node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+        is_dev = (otp_mode == "development" and node_env != "production")
+
         await db.otps.delete_many({"email": email})
         otp_rec = {
             "id": uid(),
@@ -646,7 +650,7 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
             "firstSentAt": first_sent_at_str,
             "createdAt": now()
         }
-        if email.endswith("@example.com") or email.endswith("@lupus.ai"):
+        if email.endswith("@example.com") or email.endswith("@lupus.ai") or is_dev:
             otp_rec["otp_test_bypass"] = otp
         await db.otps.insert_one(otp_rec)
         
@@ -666,10 +670,23 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
             "createdAt": now()
         })
         
-        full_phone = f"{payload.country_code}{phone_digits}"
-        await send_sms_otp(full_phone, otp)
-        await send_email_otp(email, user["name"], otp)
-        
+        if is_dev:
+            print(f"""
+[DEV OTP]
+User:
+{email}
+Mobile:
+{payload.country_code}{phone_digits}
+OTP:
+{otp}
+Expires:
+5 Minutes
+            """)
+        else:
+            full_phone = f"{payload.country_code}{phone_digits}"
+            await send_sms_otp(full_phone, otp)
+            await send_email_otp(email, user["name"], otp)
+            
         return {"ok": True, "email": email, "phone": phone_digits}
 
     @router.post("/auth/verify-otp")
@@ -867,6 +884,10 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
             otp_hash = hashlib.sha256(otp.encode()).hexdigest()
             expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).isoformat()
             
+            otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
+            node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+            is_dev = (otp_mode == "development" and node_env != "production")
+            
             await db.otps.delete_many({"email": user["email"]})
             otp_rec = {
                 "id": uid(),
@@ -878,12 +899,25 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
                 "resends": 0,
                 "createdAt": now()
             }
-            if user["email"].endswith("@example.com") or user["email"].endswith("@lupus.ai"):
+            if user["email"].endswith("@example.com") or user["email"].endswith("@lupus.ai") or is_dev:
                 otp_rec["otp_test_bypass"] = otp
             await db.otps.insert_one(otp_rec)
             
-            await send_sms_otp(f"{payload.country_code}{phone_digits}", otp)
-            await send_email_otp(user["email"], user["name"], otp)
+            if is_dev:
+                print(f"""
+[DEV OTP]
+User:
+{user["email"]}
+Mobile:
+{payload.country_code}{phone_digits}
+OTP:
+{otp}
+Expires:
+5 Minutes
+                """)
+            else:
+                await send_sms_otp(f"{payload.country_code}{phone_digits}", otp)
+                await send_email_otp(user["email"], user["name"], otp)
             
         return {"ok": True, "message": "If the phone number is registered, an OTP code has been sent."}
 

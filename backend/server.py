@@ -892,6 +892,25 @@ async def get_document(doc_id: str):
     return Document(**_serialize_dt(row, ["created_at", "updated_at"]))
 
 
+@api_router.get("/debug/latest-otp")
+async def get_latest_otp():
+    otp_mode = (os.environ.get("OTP_MODE") or "production").strip().lower()
+    node_env = (os.environ.get("NODE_ENV") or "production").strip().lower()
+    if otp_mode == "production" or node_env == "production":
+        raise HTTPException(status_code=403, detail="Debug endpoints are disabled in production mode.")
+        
+    record = await db.otps.find({}, {"_id": 0}).sort("createdAt", -1).limit(1).to_list(1)
+    if not record:
+        raise HTTPException(status_code=404, detail="No active OTP found.")
+        
+    otp_data = record[0]
+    return {
+        "phone": otp_data.get("phone"),
+        "otp": otp_data.get("otp_test_bypass"),
+        "expiresAt": otp_data.get("expiresAt")
+    }
+
+
 # ============================================================
 # Mount
 # ============================================================
