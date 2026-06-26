@@ -49,7 +49,7 @@ const PasswordStrengthMeter = ({ value }) => {
   };
 
   const getBarColor = (index) => {
-    if (value.length === 0) return "#E500;
+    if (value.length === 0) return "#E5E7EB";
     return index < strength ? strengthColors[index] : "#E5E7EB"; // gray-200
   };
 
