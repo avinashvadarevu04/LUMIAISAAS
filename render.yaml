@@ -11,6 +11,8 @@ services:
         value: mongodb+srv://lumii:lumi2025@cluster0.93stkuu.mongodb.net/lumi_ai?retryWrites=true&w=majority
       - key: DB_NAME
         value: lumi_ai
+      - key: OTP_MODE
+        value: development
       - key: EMERGENT_LLM_KEY
         value: mock_key
       - key: RESEND_API_KEY
