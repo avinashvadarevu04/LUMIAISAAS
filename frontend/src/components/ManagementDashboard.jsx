@@ -8,6 +8,7 @@ import {
   Settings, FileUp, HelpCircle, MessageSquare, Mail, Phone, ArrowLeft, UserPlus,
   Building, User, ShieldAlert
 } from "lucide-react";
+import PasswordStrengthMeter from "@/components/ui/password-strength-meter";
 import { managementApi as api, apiError } from "@/lib/managementApi";
 import Sidebar from "./dashboard/Sidebar";
 import AdminPanel from "./dashboard/AdminPanel";
@@ -25,7 +26,7 @@ function Login({ onLogin }) {
   const otpVal = otpArray.join("");
   const [resetOtpArray, setResetOtpArray] = useState(["", "", "", "", "", ""]);
   const [profileForm, setProfileForm] = useState({ company_name: "" });
-  const [resetForm, setResetForm] = useState({ otp: "", new_password: "" });
+  const [resetForm, setResetForm] = useState({ otp: "", new_password: "", confirmPassword: "" });
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(300); // 5 mins OTP expiry timer
   const [resendCooldown, setResendCooldown] = useState(60); // 60s resend cooldown
@@ -195,6 +196,12 @@ function Login({ onLogin }) {
       toast.error("Please enter a 6-digit OTP code");
       return;
     }
+
+    if (resetForm.new_password !== resetForm.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
     try {
       await api.post("/auth/reset-password", {
@@ -230,7 +237,7 @@ function Login({ onLogin }) {
             </div>
             <h1 className="mt-5 font-cine text-4xl tracking-[.08em] text-[#050a1a]">Command Center</h1>
             <p className="mt-1 text-sm text-[#050a1a]/55">Projects, approvals and delivery—one controlled system.</p>
-            
+
             <label className="mt-6 block text-xs font-semibold text-[#050a1a]">
               Work email
               <input
@@ -242,7 +249,7 @@ function Login({ onLogin }) {
                 placeholder="you@company.com"
               />
             </label>
-            
+
             <label className="mt-4 block text-xs font-semibold text-[#050a1a]">
               Password
               <input
@@ -253,6 +260,7 @@ function Login({ onLogin }) {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="mt-2 w-full rounded-xl border bg-white/75 px-4 py-3 outline-none focus:ring-2 focus:ring-[#2455FF]/30 text-sm"
               />
+              <PasswordStrengthMeter value={form.password} />
             </label>
             
             <button
@@ -352,6 +360,7 @@ function Login({ onLogin }) {
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="mt-2 w-full rounded-xl border bg-white/75 px-4 py-3 outline-none focus:ring-2 focus:ring-[#2455FF]/30 text-sm"
               />
+              <PasswordStrengthMeter value={form.password} />
             </label>
 
             <label className="mt-4 block text-xs font-semibold text-[#050a1a]">
@@ -677,6 +686,7 @@ function Login({ onLogin }) {
                 onChange={(e) => setResetForm({ ...resetForm, new_password: e.target.value })}
                 className="mt-2 w-full rounded-xl border bg-white/75 px-4 py-3 outline-none focus:ring-2 focus:ring-[#2455FF]/30 text-sm"
               />
+              <PasswordStrengthMeter value={resetForm.new_password} />
             </label>
             
             <div className="mt-6 grid grid-cols-3 gap-2">
