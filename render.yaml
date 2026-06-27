@@ -26,4 +26,4 @@ services:
       - key: ADMIN_PASSWORD
         value: lumi2025
       - key: CORS_ORIGINS
-        value: https://lumi-ai-labs-ten.vercel.app
+        value: https://lumiai.in,https://www.lumiai.in,https://lumi-ai-labs-ten.vercel.app
