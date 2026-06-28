@@ -293,3 +293,38 @@ body {
     border-left: none;
     border-top: none;
 }
+
+/* ---------- Chat bar polish (additive) ---------- */
+/* Soft drop shadow used on the AI command bar + Studio composer. */
+.chat-bar-shadow {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.85) inset,
+        0 18px 50px -22px rgba(36, 85, 255, 0.45),
+        0 4px 14px -6px rgba(5, 10, 26, 0.18);
+}
+
+/* Gentle focus glow that pairs with the existing glass-strong utility. */
+.lumi-glow {
+    transition:
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+.lumi-glow:focus-within,
+.lumi-glow.is-focused {
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.9) inset,
+        0 0 0 1px rgba(36, 85, 255, 0.55),
+        0 0 0 4px rgba(36, 85, 255, 0.14),
+        0 0 32px -6px rgba(0, 229, 255, 0.55),
+        0 22px 60px -24px rgba(36, 85, 255, 0.45);
+    border-color: rgba(36, 85, 255, 0.55);
+}
+
+/* Make the bracket corners scale down on very small screens so they don't clip. */
+@media (max-width: 480px) {
+    .bracket::before,
+    .bracket::after {
+        width: 10px;
+        height: 10px;
+    }
+}

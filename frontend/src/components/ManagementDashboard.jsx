@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Activity, BadgeIndianRupee, BriefcaseBusiness, CheckCircle2, ChevronRight,
@@ -398,8 +399,8 @@ function Login({ onLogin }) {
             <h1 className="font-cine text-3xl tracking-[.08em] text-[#050a1a]">Mobile Verification</h1>
             <p className="mt-1 text-sm text-[#050a1a]/55">Provide your mobile number to receive a 6-digit security OTP.</p>
             
-            <div className="mt-6 flex gap-2">
-              <label className="block text-xs font-semibold text-[#050a1a] w-24">
+            <div className="mt-6 flex flex-col sm:flex-row gap-2">
+              <label className="block text-xs font-semibold text-[#050a1a] sm:w-24">
                 Country
                 <select
                   value={phoneForm.country_code}
@@ -580,8 +581,8 @@ function Login({ onLogin }) {
             <h1 className="font-cine text-3xl tracking-[.08em] text-[#050a1a]">Recover Password</h1>
             <p className="mt-1 text-sm text-[#050a1a]/55">Enter your registered mobile number to receive password recovery code.</p>
             
-            <div className="mt-6 flex gap-2">
-              <label className="block text-xs font-semibold text-[#050a1a] w-24">
+            <div className="mt-6 flex flex-col sm:flex-row gap-2">
+              <label className="block text-xs font-semibold text-[#050a1a] sm:w-24">
                 Country
                 <select
                   value={phoneForm.country_code}
@@ -715,6 +716,8 @@ function Login({ onLogin }) {
 
 
 export default function ManagementDashboard() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(USER));
@@ -726,6 +729,13 @@ export default function ManagementDashboard() {
   const [tab, setTab] = useState("overview");
   const [mobile, setMobile] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Honor ?tab=settings from the avatar dropdown deep-link.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const requested = params.get("tab");
+    if (requested) setTab(requested);
+  }, [location.search]);
   
   const [data, setData] = useState({
     summary: {},
@@ -855,31 +865,32 @@ export default function ManagementDashboard() {
         mobileOpen={mobile}
         setMobileOpen={setMobile}
         onLogout={logout}
+        onNavigate={(path) => navigate(path)}
       />
 
       {/* Workspace Panel */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0 h-screen overflow-hidden relative z-10">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between border-b border-[#2455FF]/10 bg-[#f8faff]/85 backdrop-blur-xl px-5 sm:px-8">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobile(true)} className="lg:hidden text-[#050a1a]/60">
-              <Menu size={20} />
+        <header className="sticky top-0 z-30 flex h-[64px] sm:h-[72px] shrink-0 items-center justify-between border-b border-[#2455FF]/10 bg-[#f8faff]/85 backdrop-blur-xl px-3 sm:px-8 gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button onClick={() => setMobile(true)} className="lg:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/70 ring-1 ring-[#2455FF]/20 hover:bg-white text-[#050a1a]/70 hover:text-[#2455FF] transition" aria-label="Open menu">
+              <Menu size={18} />
             </button>
-            <div className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-[#050a1a]/40 sm:block">
+            <div className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-[#050a1a]/40 sm:block truncate">
               Lupus AI Labs · Delivery OS
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {loading && (
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase text-[#2455FF] tracking-wider">
+              <div className="hidden sm:flex items-center gap-2 font-mono text-[10px] uppercase text-[#2455FF] tracking-wider">
                 <Loader2 size={13} className="animate-spin" />
                 <span>Syncing...</span>
               </div>
             )}
-            <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[.15em] text-emerald-700 ring-1 ring-emerald-200">
+            <div className="flex items-center gap-1.5 sm:gap-2 rounded-full bg-emerald-50 px-2.5 sm:px-3 py-1.5 font-mono text-[9px] uppercase tracking-[.15em] text-emerald-700 ring-1 ring-emerald-200">
               <LockKeyhole size={12} />
-              <span>RBAC ACTIVE</span>
+              <span className="hidden sm:inline">RBAC ACTIVE</span>
             </div>
           </div>
         </header>

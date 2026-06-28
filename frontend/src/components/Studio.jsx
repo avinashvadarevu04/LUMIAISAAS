@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,6 +9,7 @@ import {
   Globe2,
   Loader2,
   LogOut,
+  Menu,
   MessageSquarePlus,
   Send,
   X,
@@ -27,10 +28,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUser } from "@/lib/userStore";
+import UserAvatar from "./UserAvatar";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-const JESSE_DP =
-  "https://customer-assets.emergentagent.com/job_blueprint-ai-68/artifacts/9gbr64ag_image.png";
 
 const LANGUAGES = [
   { code: "en", label: "English", native: "English" },
@@ -44,7 +44,7 @@ const LANGUAGES = [
 /* =========================================================
    Sidebar — user · New chat · Sessions · Documents (PRD only)
    ========================================================= */
-const Sidebar = ({
+const SidebarContent = ({
   user,
   onLogout,
   onNewSession,
@@ -53,19 +53,25 @@ const Sidebar = ({
   onPickSession,
   onOpenDoc,
   documents,
+  onAvatarNavigate,
+  as = "aside",
 }) => {
   const prdDoc = (documents || []).find((d) => d.type === "PRD");
+  const Wrapper = as;
   return (
-    <aside className="hidden md:flex w-[340px] shrink-0 flex-col gap-4 p-4 border-r border-[#2455FF]/12 bg-white/60 backdrop-blur-md">
+    <Wrapper className="w-full h-full flex flex-col gap-3 p-3 bg-white/95 backdrop-blur-md">
       {/* User */}
       <div
         className="glass rounded-2xl p-3 flex items-center gap-3"
         data-testid="studio-user-card"
       >
-        <span className="relative h-10 w-10 rounded-full overflow-hidden ring-2 ring-[#2455FF]/30 shrink-0">
-          <img src={JESSE_DP} alt={user?.name} className="h-full w-full object-cover" draggable="false" />
-          <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#25D366] ring-2 ring-white" />
-        </span>
+        <UserAvatar
+          user={user}
+          size="sm"
+          context="studio"
+          onLogout={onLogout}
+          onNavigate={onAvatarNavigate}
+        />
         <div className="leading-tight min-w-0 flex-1">
           <div className="font-cine text-[14px] tracking-[0.12em] text-[#050a1a] truncate" data-testid="studio-user-name">
             {user?.name || "Guest"}
@@ -176,12 +182,20 @@ const Sidebar = ({
 
       <a
         href="/"
-        className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#050a1a]/45 hover:text-[#2455FF] inline-flex items-center gap-1.5"
+        className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#050a1a]/45 hover:text-[#2455FF] inline-flex items-center gap-1.5 px-1"
         data-testid="studio-back-home"
       >
         <ArrowLeft className="h-3 w-3" strokeWidth={2.6} />
         Back to lab home
       </a>
+    </Wrapper>
+  );
+};
+
+const Sidebar = (props) => {
+  return (
+    <aside className="hidden md:flex w-[340px] shrink-0 flex-col gap-4 p-4 border-r border-[#2455FF]/12 bg-white/60 backdrop-blur-md">
+      <SidebarContent {...props} />
     </aside>
   );
 };
@@ -340,6 +354,7 @@ const DocViewer = ({ type, document: doc, onClose }) => {
    ========================================================= */
 export const Studio = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useUser();
   const [lang, setLang] = useState("en");
   const [session, setSession] = useState(null);
@@ -353,8 +368,20 @@ export const Studio = () => {
   const [sessions, setSessions] = useState([]);
   const [attaching, setAttaching] = useState(false);
   const [attachments, setAttachments] = useState([]); // local turn-scoped chips
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const fileRef = useRef(null);
   const chatScrollRef = useRef(null);
+
+  // Honor ?tab=settings deep-link so the avatar dropdown's "Settings"
+  // entry (which navigates to /dashboard?tab=settings) lands in the right place
+  // when the user is already in the studio context.
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get("tab") === "settings") {
+      navigate(`/dashboard?tab=settings`, { replace: true });
+    }
+  }, [location.search, user, navigate]);
 
   useEffect(() => {
     if (!user) navigate("/", { replace: true });
@@ -569,13 +596,22 @@ export const Studio = () => {
     <div className="min-h-screen w-full flex flex-col bg-white">
       {/* slim top bar — no black square */}
       <header
-        className="border-b border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-4 py-2.5 flex items-center justify-between"
+        className="border-b border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2"
         data-testid="studio-topbar"
       >
-        <div className="flex items-center gap-3">
-          <span className="font-cine text-[15px] tracking-[0.14em] text-[#050a1a]">LUMI&nbsp;AI</span>
-          <span className="h-4 w-px bg-[#2455FF]/25" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#2455FF]/70">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            data-testid="studio-sidebar-toggle"
+            aria-label="Open menu"
+            className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/70 ring-1 ring-[#2455FF]/20 hover:bg-white text-[#050a1a]/70 hover:text-[#2455FF] transition"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
+          <span className="font-cine text-[15px] tracking-[0.14em] text-[#050a1a] truncate">LUMI&nbsp;AI</span>
+          <span className="h-4 w-px bg-[#2455FF]/25 hidden sm:inline-block" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#2455FF]/70 hidden sm:inline">
             Studio · Intake
           </span>
         </div>
@@ -627,7 +663,62 @@ export const Studio = () => {
           onPickSession={pickSession}
           onOpenDoc={onOpenDoc}
           documents={documents}
+          onAvatarNavigate={(p) => navigate(p)}
         />
+
+        {/* Mobile sidebar drawer */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              key="mobile-sidebar"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden fixed inset-0 z-[80]"
+              data-testid="studio-mobile-sidebar"
+            >
+              <button
+                aria-label="Close menu"
+                onClick={() => setSidebarOpen(false)}
+                className="absolute inset-0 bg-[#050a1a]/35 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "-100%" }}
+                transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
+                className="absolute inset-y-0 left-0 w-[300px] max-w-[85vw] bg-white shadow-2xl"
+              >
+                <div className="h-full overflow-y-auto">
+                  <SidebarContent
+                    user={user}
+                    onLogout={() => {
+                      setSidebarOpen(false);
+                      onLogout();
+                    }}
+                    onNewSession={() => {
+                      setSidebarOpen(false);
+                      startSession(lang);
+                    }}
+                    sessions={sessions}
+                    activeSessionId={session?.id}
+                    onPickSession={(s) => {
+                      setSidebarOpen(false);
+                      pickSession(s);
+                    }}
+                    onOpenDoc={onOpenDoc}
+                    documents={documents}
+                    onAvatarNavigate={(p) => {
+                      setSidebarOpen(false);
+                      navigate(p);
+                    }}
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <main className="flex-1 min-w-0 flex flex-col bp-grid bp-wash">
           {!ready && (
@@ -649,7 +740,7 @@ export const Studio = () => {
               {/* Composer */}
               <form
                 onSubmit={sendMessage}
-                className="border-t border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-4 sm:px-8 py-4"
+                className="border-t border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-3 sm:px-8 py-4 sm:py-5"
                 data-testid="studio-composer"
               >
                 {/* Attachment chips */}
@@ -676,7 +767,7 @@ export const Studio = () => {
                   </div>
                 )}
 
-                <div className="max-w-[920px] mx-auto glass-strong rounded-2xl p-2 pl-2 flex items-center gap-2">
+                <div className="max-w-[920px] mx-auto lumi-glow chat-bar-shadow glass-strong rounded-2xl p-2 sm:p-2.5 pl-2 sm:pl-3 flex items-center gap-2">
                   {/* + attach */}
                   <input
                     ref={fileRef}
@@ -692,7 +783,7 @@ export const Studio = () => {
                     disabled={attaching || pending || ready}
                     data-testid="studio-attach-btn"
                     aria-label="Attach a document"
-                    className="h-10 w-10 rounded-xl bg-white/70 ring-1 ring-[#2455FF]/15 hover:ring-[#2455FF]/40 hover:bg-white flex items-center justify-center text-[#2455FF] transition disabled:opacity-50"
+                    className="h-10 w-10 shrink-0 rounded-xl bg-white/70 ring-1 ring-[#2455FF]/15 hover:ring-[#2455FF]/40 hover:bg-white flex items-center justify-center text-[#2455FF] transition disabled:opacity-50"
                     title="Attach a document (PDF, DOC, TXT — max 3 MB)"
                   >
                     {attaching ? (
@@ -708,13 +799,13 @@ export const Studio = () => {
                     placeholder={ready ? "PRD ready — open preview on the right." : "Write your reply…"}
                     disabled={ready || pending}
                     data-testid="studio-input"
-                    className="flex-1 min-w-0 bg-transparent outline-none font-sans text-[14.5px] text-[#050a1a] placeholder-[#050a1a]/35 py-2 px-1"
+                    className="flex-1 min-w-0 bg-transparent outline-none font-sans text-[14.5px] sm:text-[15px] text-[#050a1a] placeholder-[#050a1a]/35 py-2.5 px-1"
                   />
                   <button
                     type="submit"
                     disabled={ready || pending || !input.trim()}
                     data-testid="studio-send-btn"
-                    className="inline-flex items-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 text-[13px] font-semibold transition"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 sm:px-5 py-2.5 text-[13px] font-semibold transition shadow-[0_8px_22px_-10px_rgba(36,85,255,0.6)]"
                   >
                     <Send className="h-4 w-4" strokeWidth={2.6} />
                     Send

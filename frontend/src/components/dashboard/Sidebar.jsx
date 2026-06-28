@@ -1,6 +1,34 @@
+import { useEffect } from "react";
 import { X, LogOut } from "lucide-react";
+import UserAvatar from "../UserAvatar";
 
-export default function Sidebar({ user, nav, activeTab, setTab, mobileOpen, setMobileOpen, onLogout }) {
+export default function Sidebar({
+  user,
+  nav,
+  activeTab,
+  setTab,
+  mobileOpen,
+  setMobileOpen,
+  onLogout,
+  onNavigate,
+}) {
+  // Close mobile drawer on Escape + resize-to-lg
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [mobileOpen, setMobileOpen]);
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -21,16 +49,27 @@ export default function Sidebar({ user, nav, activeTab, setTab, mobileOpen, setM
           <a href="/" className="font-cine text-xl tracking-[.13em] text-[#050a1a]">
             LUMI AI
           </a>
-          <button onClick={() => setMobileOpen(false)} className="lg:hidden text-[#050a1a]/60">
+          <button onClick={() => setMobileOpen(false)} className="lg:hidden text-[#050a1a]/60" aria-label="Close menu">
             <X size={18} />
           </button>
         </div>
 
         {/* User Card */}
         <div className="mt-3 rounded-xl bg-[#2455FF]/[.06] p-3">
-          <div className="truncate text-sm font-semibold text-[#050a1a]">{user.name}</div>
-          <div className="mt-1 font-mono text-[9px] uppercase tracking-[.15em] text-[#2455FF]">
-            {user.role.replaceAll("_", " ")}
+          <div className="flex items-center gap-3">
+            <UserAvatar
+              user={user}
+              size="sm"
+              context="dashboard"
+              onLogout={onLogout}
+              onNavigate={onNavigate}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-semibold text-[#050a1a]">{user.name}</div>
+              <div className="mt-1 font-mono text-[9px] uppercase tracking-[.15em] text-[#2455FF]">
+                {user.role.replaceAll("_", " ")}
+              </div>
+            </div>
           </div>
         </div>
 

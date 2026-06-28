@@ -242,6 +242,7 @@ export const Hero = () => {
         user={user}
         onLoginClick={openLogin}
         onLogout={handleLogout}
+        onNavigate={(path) => navigate(path)}
       />
       <WhatsAppLoginModal
         open={loginOpen}
@@ -322,7 +323,7 @@ export const Hero = () => {
             </motion.div>
           ))}
         </div>
-        <div className="hidden xl:flex flex-col gap-3 absolute right-6 top-[26%] z-10 items-end">
+        <div className="hidden xl:flex flex-col gap-3 absolute right-6 top-[24%] z-10 items-end">
           {CINEMA_TAGS.slice(3).map((t, i) => (
             <motion.div
               key={t}
@@ -398,7 +399,7 @@ export const Hero = () => {
             className="relative mt-10 w-full max-w-[760px] bracket"
             data-testid="ai-command-bar"
           >
-            <div className="glass-strong rounded-2xl p-2 pl-4 flex items-center gap-3">
+            <div className="lumi-glow chat-bar-shadow glass-strong rounded-2xl p-2.5 pl-3 sm:pl-4 flex items-center gap-2 sm:gap-3">
               {/* Status dot + label */}
               <div className="hidden sm:flex items-center gap-2 pr-3 border-r border-[#2455FF]/15">
                 <span className="relative flex h-2 w-2">
@@ -416,7 +417,7 @@ export const Hero = () => {
                   ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  className="w-full bg-transparent outline-none font-mono text-[14.5px] text-[#050a1a] placeholder-transparent caret-[#2455FF] py-2"
+                  className="w-full bg-transparent outline-none font-mono text-[14.5px] sm:text-[15px] text-[#050a1a] placeholder-transparent caret-[#2455FF] py-2.5"
                   placeholder="Describe your AI"
                   aria-label="Describe what you want to build"
                   data-testid="ai-command-input"
@@ -424,7 +425,7 @@ export const Hero = () => {
                 {!input && (
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 left-0 flex items-center font-mono text-[14.5px] text-[#050a1a]/55"
+                    className="pointer-events-none absolute inset-y-0 left-0 flex items-center font-mono text-[14.5px] sm:text-[15px] text-[#050a1a]/55"
                   >
                     <span className="text-[#2455FF] mr-2">{">"}</span>
                     <span>{placeholder}</span>
@@ -437,7 +438,7 @@ export const Hero = () => {
               <button
                 type="submit"
                 data-testid="ai-command-submit"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] transition-colors text-white px-4 py-2.5 text-[13px] font-semibold"
+                className="group inline-flex items-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] transition-colors text-white px-4 sm:px-5 py-2.5 text-[13px] font-semibold shadow-[0_8px_22px_-10px_rgba(36,85,255,0.6)]"
               >
                 <span className="hidden sm:inline">Run</span>
                 <CornerDownLeft className="h-4 w-4" strokeWidth={2.5} />
