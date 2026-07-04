@@ -7,4 +7,4 @@ Email: dev@lupus.ai
 Password: demo1234
 3. Client (Priya Sharma)
 Email: client@demo.com
-Password: demo1234
+Password: demo1234while sending 
