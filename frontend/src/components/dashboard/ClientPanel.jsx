@@ -291,7 +291,7 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
                       placeholder="Comment for developer team..."
                       className="w-full h-20 rounded-xl bg-white border border-[#2455ff]/15 text-[#050a1a] outline-none focus:ring-2 focus:ring-[#2455ff]/30 p-3 text-xs"
                     />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         onClick={() => handleClientDecision(selectedMilestone.milestone.id, "APPROVE_MILESTONE")}
                         className="rounded-xl bg-emerald-650 bg-emerald-600 hover:bg-emerald-700 text-white py-3 text-xs font-semibold uppercase tracking-wider transition"
@@ -731,7 +731,7 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
                   {selectedCR.status === "admin_approved" && (
                     <div className="rounded-xl border p-4 bg-slate-50 space-y-4">
                       <div className="font-semibold text-[10px] uppercase text-slate-400 font-mono tracking-wider">Review approved estimation terms</div>
-                      <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div>
                           <span className="block text-[10px] text-slate-400">Total Estimation Hours</span>
                           <strong>{selectedCR.estimation_hours} Hours</strong>

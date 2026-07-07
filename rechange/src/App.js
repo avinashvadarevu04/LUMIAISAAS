@@ -1,10 +1,9 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import Hero from "@/components/Hero";
 import Studio from "@/components/Studio";
-import ManagementDashboard from "@/components/ManagementDashboard";
-import AIInfraPage from "@/components/AIInfraPage";
+import Admin from "@/components/Admin";
 
 function App() {
   return (
@@ -26,9 +25,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Hero />} />
           <Route path="/studio" element={<Studio />} />
-          <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<ManagementDashboard />} />
-          <Route path="/ai-infra" element={<AIInfraPage />} />
+          <Route path="/admin" element={<Admin />} />
         </Routes>
       </BrowserRouter>
     </div>

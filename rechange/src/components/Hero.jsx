@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Sparkles,
   Globe2,
@@ -94,32 +94,6 @@ export const Hero = () => {
   const placeholder = useTypewriter(PROMPTS);
   const [input, setInput] = useState("");
   const inputRef = useRef(null);
-  const heroRef = useRef(null);
-
-  // Mouse positioning motion values
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  // Springs to smooth out coordinates
-  const springX = useSpring(mouseX, { stiffness: 60, damping: 20 });
-  const springY = useSpring(mouseY, { stiffness: 60, damping: 20 });
-
-  // 3D Parallax mappings
-  const gridX = useTransform(springX, [-0.5, 0.5], [-24, 24]);
-  const gridY = useTransform(springY, [-0.5, 0.5], [-24, 24]);
-  const gridRotateX = useTransform(springY, [-0.5, 0.5], [3.5, -3.5]);
-  const gridRotateY = useTransform(springX, [-0.5, 0.5], [-3.5, 3.5]);
-
-  const monX = useTransform(springX, [-0.5, 0.5], [14, -14]);
-  const monY = useTransform(springY, [-0.5, 0.5], [6, -6]);
-
-  const contentX = useTransform(springX, [-0.5, 0.5], [8, -8]);
-  const contentY = useTransform(springY, [-0.5, 0.5], [8, -8]);
-
-  const leftTagsX = useTransform(springX, [-0.5, 0.5], [-25, 15]);
-  const leftTagsY = useTransform(springY, [-0.5, 0.5], [-25, 25]);
-  const rightTagsX = useTransform(springX, [-0.5, 0.5], [-15, 25]);
-  const rightTagsY = useTransform(springY, [-0.5, 0.5], [-25, 25]);
 
   // Particles — randomized once via lazy initializer (purity-safe, runs once)
   const [particles] = useState(() =>
@@ -207,31 +181,7 @@ export const Hero = () => {
     setLoginOpen(true);
   };
 
-  const handleLoginSubmit = async (payload) => {
-    if (payload.isGoogle) {
-      setUser({
-        name: payload.name,
-        email: payload.email,
-        picture: payload.picture,
-        role: payload.role,
-        isGoogle: true,
-        id: "google-user-id",
-      });
-      setLoginOpen(false);
-      playWelcomeChime();
-      toast.success(`Welcome, ${payload.name}.`, {
-        description: "Signed in via Google. Ready to cook.",
-        duration: 4200,
-        icon: <CheckCircle2 className="h-5 w-5 text-[#25D366]" strokeWidth={2.6} />,
-      });
-      if (postAuthAction === "open-studio") {
-        setPostAuthAction(null);
-        setTimeout(() => navigate("/studio"), 250);
-      }
-      return;
-    }
-
-    const { phone, name, code, mode } = payload;
+  const handleLoginSubmit = async ({ phone, name, code, mode }) => {
     const wasBook = modalIntent === "book";
     const digits = (phone || "").replace(/\D/g, "");
     try {
@@ -244,13 +194,7 @@ export const Hero = () => {
         source: "hero",
       });
       const saved = res.data;
-      setUser({
-        name: saved.name,
-        phone: saved.full_phone,
-        id: saved.id,
-        role: "CLIENT",
-        email: saved.name.toLowerCase().replace(/\s+/g, "") + "@example.com",
-      });
+      setUser({ name: saved.name, phone: saved.full_phone, id: saved.id });
       setLoginOpen(false);
       playWelcomeChime();
       const isSignin = mode === "signin";
@@ -312,49 +256,13 @@ export const Hero = () => {
 
       {/* ===================== HERO ===================== */}
       <section
-        ref={heroRef}
-        onMouseMove={(e) => {
-          const rect = heroRef.current?.getBoundingClientRect();
-          if (rect) {
-            const x = (e.clientX - rect.left) / rect.width - 0.5;
-            const y = (e.clientY - rect.top) / rect.height - 0.5;
-            mouseX.set(x);
-            mouseY.set(y);
-          }
-        }}
-        onMouseLeave={() => {
-          mouseX.set(0);
-          mouseY.set(0);
-        }}
         className="relative w-full overflow-hidden"
         data-testid="hero-section"
-        style={{ minHeight: "100vh", perspective: "1000px" }}
+        style={{ minHeight: "100vh" }}
       >
         {/* Background — blueprint grid */}
-        <motion.div
-          className="absolute inset-0 bp-grid"
-          style={{
-            x: gridX,
-            y: gridY,
-            rotateX: gridRotateX,
-            rotateY: gridRotateY,
-            transformStyle: "preserve-3d",
-            scale: 1.15,
-          }}
-          aria-hidden="true"
-        />
-        <motion.div
-          className="absolute inset-0 bp-wash"
-          style={{
-            x: gridX,
-            y: gridY,
-            rotateX: gridRotateX,
-            rotateY: gridRotateY,
-            transformStyle: "preserve-3d",
-            scale: 1.15,
-          }}
-          aria-hidden="true"
-        />
+        <div className="absolute inset-0 bp-grid" aria-hidden="true" />
+        <div className="absolute inset-0 bp-wash" aria-hidden="true" />
 
         {/* Particles */}
         <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -373,15 +281,8 @@ export const Hero = () => {
         </div>
 
         {/* Bottom landmark — full-width panoramic */}
-        <motion.div
-          className="absolute inset-x-0 bottom-0 pointer-events-none select-none z-10"
-          style={{
-            x: monX,
-            y: monY,
-          }}
-          aria-hidden="true"
-        >
-          <motion.div
+        <div className="absolute inset-x-0 bottom-0 pointer-events-none select-none" aria-hidden="true">
+          <div
             className="relative w-[110%] -ml-[5%] landmark-pan"
             style={{
               maskImage:
@@ -391,14 +292,6 @@ export const Hero = () => {
               WebkitMaskComposite: "source-in",
               maskComposite: "intersect",
             }}
-            animate={{
-              y: [0, -8, 0],
-            }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
           >
             <img
               src={HERO_IMG}
@@ -406,16 +299,13 @@ export const Hero = () => {
               className="w-full h-auto block opacity-90 mix-blend-multiply"
               draggable="false"
             />
-          </motion.div>
+          </div>
           {/* Soft cyan glow under skyline */}
           <div className="absolute inset-x-0 -bottom-8 h-40 bg-gradient-to-t from-[#00e5ff]/10 to-transparent blur-2xl" />
-        </motion.div>
+        </div>
 
         {/* Cinematic floating tags — left edge */}
-        <motion.div
-          className="hidden xl:flex flex-col gap-3 absolute left-6 top-[28%] z-10"
-          style={{ x: leftTagsX, y: leftTagsY }}
-        >
+        <div className="hidden xl:flex flex-col gap-3 absolute left-6 top-[28%] z-10">
           {CINEMA_TAGS.slice(0, 3).map((t, i) => (
             <motion.div
               key={t}
@@ -431,11 +321,8 @@ export const Hero = () => {
               </span>
             </motion.div>
           ))}
-        </motion.div>
-        <motion.div
-          className="hidden xl:flex flex-col gap-3 absolute right-6 top-[26%] z-10 items-end"
-          style={{ x: rightTagsX, y: rightTagsY }}
-        >
+        </div>
+        <div className="hidden xl:flex flex-col gap-3 absolute right-6 top-[26%] z-10 items-end">
           {CINEMA_TAGS.slice(3).map((t, i) => (
             <motion.div
               key={t}
@@ -451,16 +338,10 @@ export const Hero = () => {
               </span>
             </motion.div>
           ))}
-        </motion.div>
+        </div>
 
         {/* ===== Center content ===== */}
-        <motion.div
-          className="relative z-20 max-w-[1240px] mx-auto px-6 pt-36 sm:pt-40 pb-24 flex flex-col items-center text-center"
-          style={{
-            x: contentX,
-            y: contentY,
-          }}
-        >
+        <div className="relative z-20 max-w-[1240px] mx-auto px-6 pt-36 sm:pt-40 pb-24 flex flex-col items-center text-center">
           {/* Since badge */}
           <motion.div
             initial={{ opacity: 0, y: 12 }}
@@ -483,7 +364,7 @@ export const Hero = () => {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.9, ease: [0.2, 0.8, 0.2, 1] }}
-            className="mt-6 font-display text-[16vw] sm:text-[14vw] lg:text-[180px] leading-[1.05] pb-2 pt-1 tracking-tight text-lumi-gradient overflow-visible"
+            className="mt-6 font-display text-[20vw] sm:text-[14vw] lg:text-[180px] leading-[1.05] pb-2 pt-1 tracking-tight text-lumi-gradient overflow-visible"
             style={{ paddingBottom: "0.12em", paddingTop: "0.06em" }}
             data-testid="hero-main-heading"
           >
@@ -543,11 +424,11 @@ export const Hero = () => {
                 {!input && (
                   <div
                     aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 left-0 right-2 flex items-center font-mono text-[14.5px] text-[#050a1a]/55 overflow-hidden whitespace-nowrap"
+                    className="pointer-events-none absolute inset-y-0 left-0 flex items-center font-mono text-[14.5px] text-[#050a1a]/55"
                   >
-                    <span className="text-[#2455FF] mr-2 shrink-0">{">"}</span>
-                    <span className="truncate">{placeholder}</span>
-                    <span className="caret shrink-0" />
+                    <span className="text-[#2455FF] mr-2">{">"}</span>
+                    <span>{placeholder}</span>
+                    <span className="caret" />
                   </div>
                 )}
               </div>
@@ -585,7 +466,7 @@ export const Hero = () => {
               hidden: {},
               show: { transition: { staggerChildren: 0.08, delayChildren: 0.95 } },
             }}
-            className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-[1040px]"
+            className="mt-14 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 w-full max-w-[1040px]"
             data-testid="hero-metrics"
           >
             {METRICS.map((m, i) => {
@@ -659,7 +540,7 @@ export const Hero = () => {
               </span>
             </button>
           </motion.div>
-        </motion.div>
+        </div>
 
         {/* Bottom strip — lab readouts (above the landmark) */}
         <div className="absolute bottom-3 inset-x-0 z-10 pointer-events-none">

@@ -17,7 +17,6 @@ import {
   Paperclip,
   Trash2,
   Layers,
-  Menu,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -54,40 +53,10 @@ const Sidebar = ({
   onPickSession,
   onOpenDoc,
   documents,
-  isMobileDrawer = false,
-  onCloseMobileDrawer,
 }) => {
   const prdDoc = (documents || []).find((d) => d.type === "PRD");
-
-  const handlePickSession = (s) => {
-    onPickSession?.(s);
-    onCloseMobileDrawer?.();
-  };
-
-  const handleOpenDoc = (type) => {
-    onOpenDoc?.(type);
-    onCloseMobileDrawer?.();
-  };
-
-  const handleNewSession = () => {
-    onNewSession?.();
-    onCloseMobileDrawer?.();
-  };
-
   return (
-    <aside className={isMobileDrawer
-      ? "flex w-[300px] h-full flex-col gap-4 p-4 bg-white/95 backdrop-blur-md shadow-2xl relative z-[70] border-r border-[#2455FF]/12"
-      : "hidden md:flex w-[340px] shrink-0 flex-col gap-4 p-4 border-r border-[#2455FF]/12 bg-white/60 backdrop-blur-md"
-    }>
-      {isMobileDrawer && (
-        <button
-          onClick={onCloseMobileDrawer}
-          className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-900 transition"
-          aria-label="Close menu"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      )}
+    <aside className="hidden md:flex w-[340px] shrink-0 flex-col gap-4 p-4 border-r border-[#2455FF]/12 bg-white/60 backdrop-blur-md">
       {/* User */}
       <div
         className="glass rounded-2xl p-3 flex items-center gap-3"
@@ -123,7 +92,7 @@ const Sidebar = ({
             Ask&nbsp;Our&nbsp;AI
           </div>
           <button
-            onClick={handleNewSession}
+            onClick={onNewSession}
             data-testid="studio-new-session-btn"
             className="inline-flex items-center gap-1 text-[11px] font-cine tracking-[0.12em] text-white bg-[#2455FF] hover:bg-[#1a44e0] px-2.5 py-1 rounded-md transition"
           >
@@ -144,7 +113,7 @@ const Sidebar = ({
             return (
               <button
                 key={s.id}
-                onClick={() => handlePickSession(s)}
+                onClick={() => onPickSession?.(s)}
                 data-testid={`session-row-${s.id}`}
                 className={`group w-full text-left rounded-lg px-2.5 py-2 transition flex items-center gap-2 ring-1 ${
                   isActive
@@ -182,7 +151,7 @@ const Sidebar = ({
         </div>
         <div className="mt-3" data-testid="studio-docs-grid">
           <button
-            onClick={() => handleOpenDoc("PRD")}
+            onClick={() => onOpenDoc("PRD")}
             disabled={!prdDoc}
             data-testid="doc-card-prd"
             className={`group w-full rounded-xl p-3 text-left transition flex items-center gap-3 ring-1 ${
@@ -384,7 +353,6 @@ export const Studio = () => {
   const [sessions, setSessions] = useState([]);
   const [attaching, setAttaching] = useState(false);
   const [attachments, setAttachments] = useState([]); // local turn-scoped chips
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileRef = useRef(null);
   const chatScrollRef = useRef(null);
 
@@ -605,14 +573,6 @@ export const Studio = () => {
         data-testid="studio-topbar"
       >
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="md:hidden p-1.5 rounded-lg bg-[#050a1a]/5 hover:bg-[#050a1a]/10 text-[#050a1a] transition focus:outline-none focus:ring-2 focus:ring-[#2455FF]/40"
-            aria-label="Toggle sidebar"
-            data-testid="studio-mobile-sidebar-toggle"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
           <span className="font-cine text-[15px] tracking-[0.14em] text-[#050a1a]">LUMI&nbsp;AI</span>
           <span className="h-4 w-px bg-[#2455FF]/25" />
           <span className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#2455FF]/70">
@@ -656,44 +616,6 @@ export const Studio = () => {
           </Select>
         </div>
       </header>
-
-      {/* Mobile Sidebar Drawer */}
-      <AnimatePresence>
-        {mobileSidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex md:hidden bg-[#050a1a]/30 backdrop-blur-sm"
-          >
-            <button
-              onClick={() => setMobileSidebarOpen(false)}
-              className="absolute inset-0 cursor-default outline-none bg-transparent border-0"
-              aria-label="Close sidebar overlay"
-            />
-            <motion.div
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.25 }}
-              className="h-full"
-            >
-              <Sidebar
-                user={user}
-                onLogout={onLogout}
-                onNewSession={() => startSession(lang)}
-                sessions={sessions}
-                activeSessionId={session?.id}
-                onPickSession={pickSession}
-                onOpenDoc={onOpenDoc}
-                documents={documents}
-                isMobileDrawer={true}
-                onCloseMobileDrawer={() => setMobileSidebarOpen(false)}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <div className="flex-1 flex min-h-0">
         <Sidebar

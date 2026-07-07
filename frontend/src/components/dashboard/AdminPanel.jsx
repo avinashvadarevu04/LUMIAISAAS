@@ -1185,7 +1185,7 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
 
                 <FormField label="SOW Title" value={docForm.title} onChange={(v) => setDocForm({ ...docForm, title: v })} required />
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <FormSelect label="Associate Client" value={docForm.client_id} onChange={(e) => setDocForm({ ...docForm, client_id: e.target.value })} required>
                     <option value="">Select Client</option>
                     {clients.map(c => (
@@ -1533,7 +1533,7 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
                   <div>
                     <span className="block text-slate-400 text-[9px] uppercase">Client Organization</span>
                     <strong>{selectedCR.client_name}</strong>
@@ -1585,7 +1585,7 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
                     <div className="rounded-xl border p-4 bg-slate-50 space-y-4">
                       <div className="font-semibold text-[10px] uppercase text-slate-500 mb-2">Review Developer Estimation Details</div>
                       
-                      <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div>
                           <span className="block text-[10px] text-slate-400">Estimated Hours</span>
                           <strong>{selectedCR.estimation_hours} Hours</strong>
@@ -2011,7 +2011,7 @@ function ProjectDetailsModal({ project, onClose, refresh, activity, people }) {
                         placeholder="Write constructive notes here..."
                         className="w-full h-20 rounded-xl bg-white border border-[#2455ff]/15 text-[#050a1a] outline-none focus:ring-2 focus:ring-[#2455ff]/30 p-3 text-xs"
                       />
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <button
                           onClick={() => runDecision(selectedMilestone.milestone.id, "APPROVE")}
                           className="rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white py-2 text-[10px] font-mono uppercase tracking-wider font-semibold transition"
