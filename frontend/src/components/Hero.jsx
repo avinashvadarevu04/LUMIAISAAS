@@ -293,7 +293,10 @@ export const Hero = () => {
   const onBookCall = () => openBook();
 
   return (
-    <div className="relative w-full bg-white">
+    <div className="relative w-full bg-white min-h-screen">
+      {/* Page-wide grid background */}
+      <div className="absolute inset-0 bp-grid pointer-events-none opacity-40" aria-hidden="true" />
+      <div className="absolute inset-0 bp-wash pointer-events-none" aria-hidden="true" />
       <Navbar
         user={user}
         onLoginClick={openLogin}

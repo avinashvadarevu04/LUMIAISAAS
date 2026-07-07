@@ -108,6 +108,24 @@ const AdminLogin = () => {
             </div>
           </div>
 
+          <div className="flex items-center justify-between font-mono text-[9px] text-slate-400 mt-2">
+            <label className="flex items-center gap-1.5 cursor-pointer hover:text-white transition">
+              <input
+                type="checkbox"
+                defaultChecked
+                className="w-3.5 h-3.5 rounded bg-white/5 border border-[#2455FF]/20 text-[#2455FF] accent-[#2455FF]"
+              />
+              <span>Remember Me</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => toast.info("Passkey recovery link dispatched.", { description: "Please check your registered administrator inbox." })}
+              className="hover:text-white transition underline bg-transparent border-0"
+            >
+              Forgot Password?
+            </button>
+          </div>
+
           <button
             type="submit"
             disabled={loading}

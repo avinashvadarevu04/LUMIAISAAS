@@ -108,11 +108,11 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
 
   const menuItems = [
     {
-      label: "My Dashboard",
+      label: "Dashboard",
       icon: LayoutDashboard,
       onClick: () => {
         setDropdownOpen(false);
-        navigate("/account?tab=dashboard");
+        navigate("/admin/login");
       },
     },
     {

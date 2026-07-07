@@ -57,8 +57,9 @@ const AccountHub = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Tab state
-  const activeTab = searchParams.get("tab") || "dashboard";
+  // Tab state (default to profile, redirect dashboard to profile)
+  const rawTab = searchParams.get("tab") || "profile";
+  const activeTab = rawTab === "dashboard" ? "profile" : rawTab;
 
   // Shared states stored in local storage
   const [profileData, setProfileData] = useState(() => {
@@ -177,7 +178,11 @@ const AccountHub = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-white dark:bg-[#050a1a] transition-colors duration-300 pb-12">
+    <div className="min-h-screen w-full flex flex-col bg-white text-[#050a1a] pb-12 relative overflow-hidden">
+      {/* Background blueprint grid */}
+      <div className="absolute inset-0 bp-grid pointer-events-none opacity-45" aria-hidden="true" />
+      <div className="absolute inset-0 bp-wash pointer-events-none" aria-hidden="true" />
+
       <Navbar user={user} onLoginClick={() => {}} onLogout={() => { setUser(null); navigate("/"); }} />
 
       {/* Top Banner Grid */}
@@ -227,7 +232,6 @@ const AccountHub = () => {
           {/* Quick tab controls header */}
           <div className="flex flex-wrap gap-1 mt-6 border-b border-[#2455FF]/10 pb-1">
             {[
-              { key: "dashboard", label: "My Dashboard", icon: LayoutDashboard },
               { key: "profile", label: "My Profile", icon: User },
               { key: "settings", label: "Account Settings", icon: Settings },
               { key: "notifications", label: "Notifications", icon: Bell },
@@ -258,9 +262,9 @@ const AccountHub = () => {
       {/* Main body content tab router */}
       <div className="max-w-[1240px] mx-auto px-6 mt-8 w-full flex-1">
         
-        {/* ================= TAB 1: MY DASHBOARD ================= */}
-        {activeTab === "dashboard" && (
-          <div className="space-y-6">
+        {/* ================= TAB 1: MY PROFILE & PERSONAL DASHBOARD ================= */}
+        {activeTab === "profile" && (
+          <div className="space-y-6 max-w-[1240px] mx-auto">
             
             {/* statistics cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -287,60 +291,160 @@ const AccountHub = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Recent Activities, Projects, Tasks */}
-              <div className="lg:col-span-2 space-y-6">
-                
-                {/* Active tasks */}
-                <div className="glass rounded-2xl p-5 border border-[#2455FF]/15 text-left">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-3">
-                    Active Action Items
-                  </div>
-                  <div className="space-y-3.5">
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
-                      <div>
-                        <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT ALPHA</span>
-                        <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Approve Milestone 2 SOW Contract terms</div>
-                      </div>
-                      <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
-                      <div>
-                        <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT BETA</span>
-                        <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Verify dynamic GPU nodes metrics</div>
-                      </div>
-                      <button onClick={() => navigate("/ai-infra")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
+              
+              {/* Profile Details Edit Card (Takes 2 columns) */}
+              <div className="lg:col-span-2 glass rounded-3xl p-6 border border-[#2455FF]/15 text-left space-y-6">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-2">
+                  Account Profile Identity
                 </div>
-
-                {/* Recent Activities */}
-                <div className="glass rounded-2xl p-5 border border-[#2455FF]/15 text-left">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-3">
-                    Personal Activity Log
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Picture Upload Sidebar */}
+                  <div className="flex flex-col items-center border-r border-[#2455FF]/10 pr-4 space-y-4">
+                    <div className="relative h-28 w-28 rounded-full overflow-hidden ring-4 ring-[#2455FF]/20 shadow-lg shrink-0">
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full bg-[#2455FF] flex items-center justify-center text-white font-cine text-4xl font-bold">
+                          {user.name?.[0] || "U"}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col w-full gap-2 px-4">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAvatarUpload}
+                        accept="image/*"
+                        className="hidden"
+                      />
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="py-1.5 px-3 rounded-lg bg-[#2455FF]/10 hover:bg-[#2455FF]/20 text-[#2455FF] font-mono text-[10.5px] font-semibold transition flex items-center justify-center gap-1.5"
+                      >
+                        <Upload className="h-3 w-3" /> Change Picture
+                      </button>
+                      {avatarUrl && (
+                        <button
+                          onClick={handleAvatarRemove}
+                          className="py-1.5 px-3 rounded-lg bg-rose-50 dark:bg-rose-950/20 text-rose-600 hover:bg-rose-100/50 font-mono text-[10.5px] font-semibold transition flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 className="h-3 w-3" /> Remove
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    {RECENT_ACTIVITIES.map((act) => (
-                      <div key={act.id} className="flex items-start gap-3 text-xs leading-normal">
-                        <span className="inline-flex h-2 w-2 rounded-full bg-[#2455FF] mt-1.5" />
-                        <div className="flex-1 flex justify-between gap-4">
-                          <span className="text-[#050a1a] dark:text-white font-medium">{act.action}</span>
-                          <span className="font-mono text-[9.5px] text-slate-400 shrink-0">{act.time}</span>
+
+                  {/* Editable Fields Column */}
+                  <div className="md:col-span-2 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Full Name</label>
+                        <input
+                          type="text"
+                          value={user.name || ""}
+                          onChange={(e) => setUser({ ...user, name: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Email Address</label>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="email"
+                            value={user.email || ""}
+                            disabled
+                            className="flex-1 rounded-xl border border-slate-200 dark:border-[#2455FF]/20 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-400 outline-none"
+                          />
+                          <span className="font-mono text-[8px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full shrink-0 uppercase tracking-wider font-semibold">
+                            ✓ VERIFIED
+                          </span>
                         </div>
                       </div>
-                    ))}
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Mobile Number</label>
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="text"
+                            value={user.phone || "+1 (555) 019-2834"}
+                            disabled
+                            className="flex-1 rounded-xl border border-slate-200 dark:border-[#2455FF]/20 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-400 outline-none"
+                          />
+                          <span className="font-mono text-[8px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full shrink-0 uppercase tracking-wider font-semibold">
+                            ✓ VERIFIED
+                          </span>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Company</label>
+                        <input
+                          type="text"
+                          value={profileData.company}
+                          onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Job Title</label>
+                        <input
+                          type="text"
+                          value={profileData.jobTitle}
+                          onChange={(e) => setProfileData({ ...profileData, jobTitle: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Timezone</label>
+                        <input
+                          type="text"
+                          value={profileData.timezone}
+                          onChange={(e) => setProfileData({ ...profileData, timezone: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Country</label>
+                        <input
+                          type="text"
+                          value={profileData.country}
+                          onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">State</label>
+                        <input
+                          type="text"
+                          value={profileData.state}
+                          onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
+                          className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Bio</label>
+                      <textarea
+                        value={profileData.bio}
+                        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                        className="w-full h-16 rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition resize-none"
+                      />
+                    </div>
+
+                    <button
+                      onClick={() => toast.success("Identity changes saved successfully.")}
+                      className="px-5 py-2 bg-[#2455FF] hover:bg-[#1a44e0] text-white font-mono text-xs uppercase tracking-wider rounded-xl transition font-bold"
+                    >
+                      Save Profile Details
+                    </button>
                   </div>
                 </div>
               </div>
 
-              {/* Right Column: Profile Summary & Quick Actions */}
+              {/* Personal Dashboard Activity / Operations (Takes 1 column) */}
               <div className="space-y-6">
                 
-                {/* Quick Actions Panel */}
+                {/* Operations widget */}
                 <div className="glass rounded-2xl p-5 border border-[#2455FF]/15 text-left">
                   <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-3">
                     Quick Operations
@@ -370,178 +474,54 @@ const AccountHub = () => {
                   </div>
                 </div>
 
-                {/* Profile Summary Card */}
+                {/* Active tasks widget */}
                 <div className="glass rounded-2xl p-5 border border-[#2455FF]/15 text-left">
                   <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-3">
-                    Profile Outline
+                    Pending Tasks
                   </div>
-                  <div className="space-y-2.5 font-mono text-[10.5px] text-slate-600 dark:text-slate-400">
-                    <div>
-                      <span className="block uppercase text-[8.5px] text-slate-400">Company</span>
-                      <strong className="text-[#050a1a] dark:text-white text-xs">{profileData.company}</strong>
+                  <div className="space-y-3.5">
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                      <div>
+                        <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT ALPHA</span>
+                        <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Approve Milestone 2 SOW Contract terms</div>
+                      </div>
+                      <button onClick={() => navigate("/dashboard")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
                     </div>
-                    <div>
-                      <span className="block uppercase text-[8.5px] text-slate-400">Job Title</span>
-                      <strong className="text-[#050a1a] dark:text-white text-xs">{profileData.jobTitle}</strong>
-                    </div>
-                    <div>
-                      <span className="block uppercase text-[8.5px] text-slate-400">Location</span>
-                      <strong className="text-[#050a1a] dark:text-white text-xs">{profileData.state}, {profileData.country}</strong>
+
+                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                      <div>
+                        <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT BETA</span>
+                        <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Verify dynamic GPU nodes metrics</div>
+                      </div>
+                      <button onClick={() => navigate("/ai-infra")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* ================= TAB 2: MY PROFILE ================= */}
-        {activeTab === "profile" && (
-          <div className="glass rounded-3xl p-6 border border-[#2455FF]/15 text-left max-w-4xl mx-auto">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-6">
-              Account Profile Identity
-            </div>
+                {/* Recent Activities widget */}
+                <div className="glass rounded-2xl p-5 border border-[#2455FF]/15 text-left">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-3">
+                    Activity Logs
+                  </div>
+                  <div className="space-y-2.5">
+                    {RECENT_ACTIVITIES.map((act) => (
+                      <div key={act.id} className="flex items-start gap-2.5 text-[11px] leading-normal">
+                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#2455FF] mt-1.5 shrink-0" />
+                        <div className="flex-1 flex justify-between gap-2">
+                          <span className="text-[#050a1a] dark:text-white font-medium">{act.action}</span>
+                          <span className="font-mono text-[8.5px] text-slate-400 shrink-0">{act.time}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Picture Upload Sidebar */}
-              <div className="flex flex-col items-center border-r border-[#2455FF]/10 pr-4 space-y-4">
-                <div className="relative h-28 w-28 rounded-full overflow-hidden ring-4 ring-[#2455FF]/20 shadow-lg">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full bg-[#2455FF] flex items-center justify-center text-white font-cine text-4xl font-bold">
-                      {user.name?.[0] || "U"}
-                    </div>
-                  )}
-                </div>
-                <div className="flex flex-col w-full gap-2 px-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleAvatarUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="py-1.5 px-3 rounded-lg bg-[#2455FF]/10 hover:bg-[#2455FF]/20 text-[#2455FF] font-mono text-[10.5px] font-semibold transition flex items-center justify-center gap-1.5"
-                  >
-                    <Upload className="h-3 w-3" /> Change Picture
-                  </button>
-                  {avatarUrl && (
-                    <button
-                      onClick={handleAvatarRemove}
-                      className="py-1.5 px-3 rounded-lg bg-rose-50 dark:bg-rose-950/20 text-rose-600 hover:bg-rose-100/50 font-mono text-[10.5px] font-semibold transition flex items-center justify-center gap-1.5"
-                    >
-                      <Trash2 className="h-3 w-3" /> Remove
-                    </button>
-                  )}
-                </div>
               </div>
 
-              {/* Editable Fields Column */}
-              <div className="md:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Full Name</label>
-                    <input
-                      type="text"
-                      value={user.name || ""}
-                      onChange={(e) => setUser({ ...user, name: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Email Address</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="email"
-                        value={user.email || ""}
-                        disabled
-                        className="flex-1 rounded-xl border border-slate-200 dark:border-[#2455FF]/20 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-400 outline-none"
-                      />
-                      <span className="font-mono text-[8px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full shrink-0 uppercase tracking-wider font-semibold">
-                        ✓ VERIFIED
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Mobile Number</label>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="text"
-                        value={user.phone || "+1 (555) 019-2834"}
-                        disabled
-                        className="flex-1 rounded-xl border border-slate-200 dark:border-[#2455FF]/20 bg-slate-50 dark:bg-white/5 px-3 py-2 text-xs text-slate-400 outline-none"
-                      />
-                      <span className="font-mono text-[8px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full shrink-0 uppercase tracking-wider font-semibold">
-                        ✓ VERIFIED
-                      </span>
-                    </div>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Company</label>
-                    <input
-                      type="text"
-                      value={profileData.company}
-                      onChange={(e) => setProfileData({ ...profileData, company: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Job Title</label>
-                    <input
-                      type="text"
-                      value={profileData.jobTitle}
-                      onChange={(e) => setProfileData({ ...profileData, jobTitle: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Timezone</label>
-                    <input
-                      type="text"
-                      value={profileData.timezone}
-                      onChange={(e) => setProfileData({ ...profileData, timezone: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Country</label>
-                    <input
-                      type="text"
-                      value={profileData.country}
-                      onChange={(e) => setProfileData({ ...profileData, country: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">State</label>
-                    <input
-                      type="text"
-                      value={profileData.state}
-                      onChange={(e) => setProfileData({ ...profileData, state: e.target.value })}
-                      className="w-full rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="block font-mono text-[9px] uppercase tracking-wider text-slate-400">Bio</label>
-                  <textarea
-                    value={profileData.bio}
-                    onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
-                    className="w-full h-16 rounded-xl border dark:border-[#2455FF]/20 bg-white/70 dark:bg-white/5 px-3 py-2 text-xs text-[#050a1a] dark:text-white outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition resize-none"
-                  />
-                </div>
-
-                <button
-                  onClick={() => toast.success("Identity changes saved successfully.")}
-                  className="px-5 py-2 bg-[#2455FF] hover:bg-[#1a44e0] text-white font-mono text-xs uppercase tracking-wider rounded-xl transition"
-                >
-                  Save identity
-                </button>
-              </div>
             </div>
           </div>
         )}
