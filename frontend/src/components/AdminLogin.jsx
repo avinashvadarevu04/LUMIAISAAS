@@ -55,7 +55,7 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center text-[#050a1a] p-6 relative">
+    <div className="min-h-screen w-full flex flex-col justify-center items-center bg-white text-[#050a1a] p-6 relative">
       {/* Blueprint Grid Background */}
       <div className="absolute inset-0 bp-grid pointer-events-none opacity-45" aria-hidden="true" />
 
