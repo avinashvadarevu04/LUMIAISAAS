@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   Activity, BadgeIndianRupee, BriefcaseBusiness, CheckCircle2, ChevronRight,
@@ -68,9 +69,13 @@ function Login({ onLogin }) {
         }
         localStorage.setItem(USER, JSON.stringify(data.user));
         if (data.user.role === "SUPER_ADMIN") {
-          localStorage.setItem("lumi.admin.pwd.v1", form.password);
+          localStorage.removeItem(TOKEN);
+          localStorage.removeItem(USER);
+          localStorage.removeItem("lumi.management.refreshToken");
+          toast.error("Access Denied", { description: "Admins must log in through the Command Center at /admin/login." });
+        } else {
+          onLogin(data.user);
         }
-        onLogin(data.user);
       }
     } catch (err) {
       toast.error(apiError(err));
@@ -714,7 +719,8 @@ function Login({ onLogin }) {
 }
 
 
-export default function ManagementDashboard() {
+export default function ManagementDashboard({ isAdminOnly = false }) {
+  const navigate = useNavigate();
   const [user, setUser] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(USER));
@@ -722,6 +728,19 @@ export default function ManagementDashboard() {
       return null;
     }
   });
+
+  // Guard checks
+  useEffect(() => {
+    if (isAdminOnly) {
+      if (!user) {
+        navigate("/admin/login", { replace: true });
+      }
+    } else {
+      if (user && user.role === "SUPER_ADMIN") {
+        navigate("/admin/dashboard", { replace: true });
+      }
+    }
+  }, [user, isAdminOnly, navigate]);
 
   const [tab, setTab] = useState("overview");
   const [mobile, setMobile] = useState(false);
@@ -838,6 +857,24 @@ export default function ManagementDashboard() {
     localStorage.removeItem("lumi.admin.pwd.v1");
     setUser(null);
   };
+
+  if (isAdminOnly && user && user.role !== "SUPER_ADMIN") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#050a1a] text-white p-6 relative">
+        <div className="absolute inset-0 bp-grid pointer-events-none opacity-20" aria-hidden="true" />
+        <div className="text-center space-y-4 max-w-[420px] glass-strong p-8 rounded-3xl border border-rose-500/20 relative z-10">
+          <ShieldAlert className="h-12 w-12 text-rose-500 mx-auto animate-pulse" />
+          <h2 className="font-cine text-xl tracking-widest uppercase font-bold text-white">Access Denied</h2>
+          <p className="text-slate-400 font-mono text-xs leading-relaxed">
+            Only authorized Super Admin accounts can access the Command Center dashboard.
+          </p>
+          <button onClick={() => navigate("/")} className="w-full py-2.5 bg-[#2455FF] hover:bg-[#1a44e0] text-white font-mono text-xs uppercase tracking-wider rounded-xl transition">
+            Back to Lab Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) return <Login onLogin={setUser} />;
 

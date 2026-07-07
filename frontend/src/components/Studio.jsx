@@ -469,6 +469,22 @@ const DocViewer = ({ type, document: doc, onClose }) => {
   );
 };
 
+const deduplicateMessages = (msgs) => {
+  const seen = new Set();
+  const result = [];
+  for (const m of msgs) {
+    const key = `${m.role}_${m.text}_${m.ts || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push({
+        ...m,
+        id: m.id || `${m.role}-${m.ts || ""}-${result.length}-${m.text.slice(0, 20)}`
+      });
+    }
+  }
+  return result;
+};
+
 /* =========================================================
    Main Studio
    ========================================================= */
@@ -505,10 +521,12 @@ export const Studio = () => {
     try {
       const res = await axios.post(`${API}/intake/start`, { user_id: user.id, language: langCode });
       const data = { ...res.data, max_turns: 12 };
+      data.messages = deduplicateMessages(data.messages || []);
       setSession(data);
       setReady(false);
       setPrd(null);
       setAttachments([]);
+      sessionStorage.setItem("lumi.activeSessionId", data.id);
       await refreshSessions();
       const pendingPrompt = sessionStorage.getItem("lumi.firstPrompt");
       if (pendingPrompt && pendingPrompt.trim()) {
@@ -524,18 +542,24 @@ export const Studio = () => {
 
   const sendFirstPrompt = async (sid, text) => {
     setPending(true);
-    setSession((s) => ({
-      ...s,
-      messages: [...(s?.messages || []), { role: "user", text, ts: new Date().toISOString() }],
-      user_turn_count: (s?.user_turn_count || 0) + 1,
-    }));
+    setSession((s) => {
+      const msgs = [...(s?.messages || []), { role: "user", text, ts: new Date().toISOString() }];
+      return {
+        ...s,
+        messages: deduplicateMessages(msgs),
+        user_turn_count: (s?.user_turn_count || 0) + 1,
+      };
+    });
     try {
       const res = await axios.post(`${API}/intake/${sid}/message`, { text });
-      setSession((s) => ({
-        ...s,
-        messages: [...(s.messages || []), { role: "assistant", text: res.data.assistant_text, ts: new Date().toISOString() }],
-        user_turn_count: res.data.user_turn_count,
-      }));
+      setSession((s) => {
+        const msgs = [...(s.messages || []), { role: "assistant", text: res.data.assistant_text, ts: new Date().toISOString() }];
+        return {
+          ...s,
+          messages: deduplicateMessages(msgs),
+          user_turn_count: res.data.user_turn_count,
+        };
+      });
       if (res.data.ready && res.data.prd) {
         setPrd(res.data.prd);
         setReady(true);
@@ -568,14 +592,57 @@ export const Studio = () => {
     }
   };
 
+  const loadInitialData = async () => {
+    if (!user?.id) return;
+    try {
+      await refreshDocs();
+      
+      const res = await axios.get(`${API}/sessions`, { params: { user_id: user.id } });
+      const sessList = res.data || [];
+      setSessions(sessList);
+
+      const storedSessId = sessionStorage.getItem("lumi.activeSessionId");
+      let activeSess = null;
+
+      if (storedSessId) {
+        try {
+          const sessRes = await axios.get(`${API}/intake/${storedSessId}`);
+          activeSess = { ...sessRes.data, max_turns: 12 };
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      if (!activeSess && sessList.length > 0) {
+        const latest = sessList[0];
+        if (latest.status === "active") {
+          try {
+            const sessRes = await axios.get(`${API}/intake/${latest.id}`);
+            activeSess = { ...sessRes.data, max_turns: 12 };
+          } catch (err) {
+            // ignore
+          }
+        }
+      }
+
+      if (activeSess) {
+        activeSess.messages = deduplicateMessages(activeSess.messages || []);
+        setSession(activeSess);
+        const isReady = activeSess.status === "ready" && activeSess.pending_prd;
+        setReady(isReady);
+        setPrd(isReady ? activeSess.pending_prd : null);
+        sessionStorage.setItem("lumi.activeSessionId", activeSess.id);
+      } else {
+        await startSession(lang);
+      }
+    } catch (e) {
+      await startSession(lang);
+    }
+  };
+
   useEffect(() => {
     if (!user?.id) return undefined;
-    const t = setTimeout(() => {
-      if (!session) startSession(lang);
-      refreshDocs();
-      refreshSessions();
-    }, 0);
-    return () => clearTimeout(t);
+    loadInitialData();
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // auto-scroll chat to bottom on new messages
@@ -591,19 +658,25 @@ export const Studio = () => {
     if (!text || !session?.id || pending || ready) return;
     setInput("");
     setAttachments([]);
-    setSession((s) => ({
-      ...s,
-      messages: [...(s.messages || []), { role: "user", text, ts: new Date().toISOString() }],
-      user_turn_count: (s?.user_turn_count || 0) + 1,
-    }));
+    setSession((s) => {
+      const msgs = [...(s.messages || []), { role: "user", text, ts: new Date().toISOString() }];
+      return {
+        ...s,
+        messages: deduplicateMessages(msgs),
+        user_turn_count: (s?.user_turn_count || 0) + 1,
+      };
+    });
     setPending(true);
     try {
       const res = await axios.post(`${API}/intake/${session.id}/message`, { text });
-      setSession((s) => ({
-        ...s,
-        messages: [...(s.messages || []), { role: "assistant", text: res.data.assistant_text, ts: new Date().toISOString() }],
-        user_turn_count: res.data.user_turn_count,
-      }));
+      setSession((s) => {
+        const msgs = [...(s.messages || []), { role: "assistant", text: res.data.assistant_text, ts: new Date().toISOString() }];
+        return {
+          ...s,
+          messages: deduplicateMessages(msgs),
+          user_turn_count: res.data.user_turn_count,
+        };
+      });
       if (res.data.ready && res.data.prd) {
         setPrd(res.data.prd);
         setReady(true);
@@ -664,11 +737,13 @@ export const Studio = () => {
     try {
       const res = await axios.get(`${API}/intake/${s.id}`);
       const data = { ...res.data, max_turns: 12 };
+      data.messages = deduplicateMessages(data.messages || []);
       setSession(data);
       const isReady = data.status === "ready" && data.pending_prd;
       setReady(isReady);
       setPrd(isReady ? data.pending_prd : null);
       setAttachments([]);
+      sessionStorage.setItem("lumi.activeSessionId", data.id);
     } catch (e) {
       toast.error("Couldn't load chat.", { description: e.message });
     }
@@ -701,7 +776,7 @@ export const Studio = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-white">
+    <div className="h-screen max-h-screen w-full flex flex-col bg-white overflow-hidden">
       {/* slim top bar — no black square */}
       <header
         className="border-b border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-4 py-2.5 flex items-center justify-between"
@@ -784,7 +859,10 @@ export const Studio = () => {
               <Sidebar
                 user={user}
                 onLogout={onLogout}
-                onNewSession={() => startSession(lang)}
+                onNewSession={() => {
+                  sessionStorage.removeItem("lumi.activeSessionId");
+                  startSession(lang);
+                }}
                 sessions={sessions}
                 activeSessionId={session?.id}
                 onPickSession={pickSession}
@@ -798,11 +876,14 @@ export const Studio = () => {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         <Sidebar
           user={user}
           onLogout={onLogout}
-          onNewSession={() => startSession(lang)}
+          onNewSession={() => {
+            sessionStorage.removeItem("lumi.activeSessionId");
+            startSession(lang);
+          }}
           sessions={sessions}
           activeSessionId={session?.id}
           onPickSession={pickSession}
@@ -810,12 +891,12 @@ export const Studio = () => {
           documents={documents}
         />
 
-        <main className="flex-1 min-w-0 flex flex-col bp-grid bp-wash">
+        <main className="flex-1 min-w-0 flex flex-col bp-grid bp-wash overflow-hidden">
           {!ready && (
             <>
               <div ref={chatScrollRef} className="flex-1 overflow-y-auto px-4 sm:px-8 py-6 space-y-3" data-testid="studio-chat-scroll">
-                {(session?.messages || []).map((m, i) => (
-                  <Bubble key={i} role={m.role}>{m.text}</Bubble>
+                {(session?.messages || []).map((m) => (
+                  <Bubble key={m.id} role={m.role}>{m.text}</Bubble>
                 ))}
                 {pending && (
                   <div className="flex justify-start">

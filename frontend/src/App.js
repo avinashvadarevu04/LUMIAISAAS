@@ -7,6 +7,7 @@ import ManagementDashboard from "@/components/ManagementDashboard";
 import AIInfraPage from "@/components/AIInfraPage";
 import CommandPalette from "@/components/CommandPalette";
 import AccountHub from "@/components/AccountHub";
+import AdminLogin from "@/components/AdminLogin";
 
 function App() {
   return (
@@ -29,8 +30,10 @@ function App() {
         <Routes>
           <Route path="/" element={<Hero />} />
           <Route path="/studio" element={<Studio />} />
-          <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<ManagementDashboard />} />
+          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<ManagementDashboard isAdminOnly={true} />} />
+          <Route path="/dashboard" element={<ManagementDashboard isAdminOnly={false} />} />
           <Route path="/ai-infra" element={<AIInfraPage />} />
           <Route path="/account" element={<AccountHub />} />
         </Routes>
