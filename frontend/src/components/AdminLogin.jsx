@@ -36,16 +36,20 @@ const AdminLogin = () => {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       
-      if (data.user && data.user.role === "SUPER_ADMIN") {
+      if (data.user) {
         localStorage.setItem(TOKEN, data.accessToken);
         if (data.refreshToken) {
           localStorage.setItem("lumi.management.refreshToken", data.refreshToken);
         }
         localStorage.setItem(USER, JSON.stringify(data.user));
-        toast.success("Welcome, Super Admin", { description: "Logged into Executive Command Center." });
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        toast.error("Access Denied", { description: "Non-admin accounts are unauthorized to access the Command Center." });
+        
+        if (data.user.role === "SUPER_ADMIN") {
+          toast.success("Welcome, Super Admin", { description: "Logged into Executive Command Center." });
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          toast.success(`Welcome, ${data.user.name}`, { description: "Logged into Delivery Workspace." });
+          navigate("/dashboard", { replace: true });
+        }
       }
     } catch (err) {
       toast.error("Authentication failed", { description: apiError(err) });

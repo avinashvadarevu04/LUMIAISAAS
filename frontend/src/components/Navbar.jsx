@@ -112,7 +112,13 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: LayoutDashboard,
       onClick: () => {
         setDropdownOpen(false);
-        navigate("/admin/login");
+        if (!user) {
+          navigate("/admin/login");
+        } else if (user.role === "SUPER_ADMIN") {
+          navigate("/admin/dashboard");
+        } else {
+          navigate("/dashboard");
+        }
       },
     },
     {

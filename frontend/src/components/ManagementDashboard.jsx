@@ -731,12 +731,12 @@ export default function ManagementDashboard({ isAdminOnly = false }) {
 
   // Guard checks
   useEffect(() => {
-    if (isAdminOnly) {
-      if (!user) {
-        navigate("/admin/login", { replace: true });
-      }
+    if (!user) {
+      navigate("/admin/login", { replace: true });
     } else {
-      if (user && user.role === "SUPER_ADMIN") {
+      if (isAdminOnly && user.role !== "SUPER_ADMIN") {
+        // Handled in access denied block
+      } else if (!isAdminOnly && user.role === "SUPER_ADMIN") {
         navigate("/admin/dashboard", { replace: true });
       }
     }
@@ -876,7 +876,7 @@ export default function ManagementDashboard({ isAdminOnly = false }) {
     );
   }
 
-  if (!user) return <Login onLogin={setUser} />;
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-[#f8faff] text-[#050a1a] flex overflow-hidden font-sans relative">
