@@ -3,18 +3,54 @@
 @tailwind utilities;
 
 :root {
+    --background: 222 47% 6%; /* default dark */
+    --foreground: 0 0% 100%;
+    --card: 222 47% 6%;
+    --card-foreground: 0 0% 100%;
+    --popover: 222 47% 6%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 226 100% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 222 30% 12%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 222 30% 12%;
+    --muted-foreground: 215.4 16.3% 56.9%;
+    --accent: 188 100% 50%;
+    --accent-foreground: 222 47% 6%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 222 30% 18%;
+    --input: 222 30% 18%;
+    --ring: 226 100% 57%;
+    --radius: 0.75rem;
+
     --lumi-blue: #2455ff;
     --lumi-blue-soft: #6b8aff;
     --lumi-cyan: #00e5ff;
+    --lumi-ink: #ffffff;
+    --lumi-paper: #050a1a;
+    --lumi-grid: rgba(36, 85, 255, 0.05);
+    --lumi-grid-strong: rgba(36, 85, 255, 0.15);
+}
+
+.light {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 6%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 6%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 6%;
+    --secondary: 222 30% 96%;
+    --secondary-foreground: 222 47% 6%;
+    --muted: 222 30% 96%;
+    --muted-foreground: 222 20% 40%;
+    --border: 222 30% 90%;
+    --input: 222 30% 90%;
+
     --lumi-ink: #050a1a;
     --lumi-paper: #ffffff;
     --lumi-grid: rgba(36, 85, 255, 0.08);
     --lumi-grid-strong: rgba(36, 85, 255, 0.16);
-}
-
-@media (prefers-color-scheme: dark) {
-    :root { color-scheme: dark; }
-    body { background: #050a1a; }
 }
 
 body {
@@ -31,31 +67,6 @@ body {
 ::selection {
     background: var(--lumi-blue);
     color: #ffffff;
-}
-
-@layer base {
-    :root {
-        --background: 0 0% 100%;
-        --foreground: 222 47% 6%;
-        --card: 0 0% 100%;
-        --card-foreground: 222 47% 6%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 222 47% 6%;
-        --primary: 226 100% 57%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 222 30% 96%;
-        --secondary-foreground: 222 47% 6%;
-        --muted: 222 30% 96%;
-        --muted-foreground: 222 20% 40%;
-        --accent: 188 100% 50%;
-        --accent-foreground: 222 47% 6%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 222 30% 90%;
-        --input: 222 30% 90%;
-        --ring: 226 100% 57%;
-        --radius: 0.75rem;
-    }
 }
 
 @layer base {

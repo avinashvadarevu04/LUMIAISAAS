@@ -18,6 +18,7 @@ import {
   Trash2,
   Layers,
   Menu,
+  Database,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -238,6 +239,7 @@ const Bubble = ({ role, children }) => {
 const PRDPreview = ({ prd, sessionId, onSent, onBack }) => {
   const [sending, setSending] = useState(false);
   const [edited, setEdited] = useState(prd?.prd_markdown || "");
+  const [activeTab, setActiveTab] = useState("preview"); // "preview" | "visualizer"
   const send = async () => {
     setSending(true);
     try {
@@ -311,8 +313,108 @@ const PRDPreview = ({ prd, sessionId, onSent, onBack }) => {
             className="flex-1 w-full rounded-xl bg-white/70 ring-1 ring-[#2455FF]/15 focus:ring-[#2455FF]/50 outline-none p-4 font-mono text-[12.5px] leading-relaxed text-[#050a1a] resize-none"
           />
         </div>
-        <div className="p-6 overflow-y-auto bp-grid bp-wash" data-testid="prd-preview-render">
-          <article className="prose-doc max-w-none">{renderMd(edited)}</article>
+        <div className="flex flex-col min-h-0 border-l border-[#2455FF]/12">
+          <div className="flex items-center justify-between border-b border-[#2455FF]/12 px-4 py-2 bg-slate-50 dark:bg-white/5">
+            <span className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-[#050a1a]/55 dark:text-white/55">
+              Intake Outputs
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("preview")}
+                className={`px-3 py-1 text-[11px] font-mono rounded-lg transition ${
+                  activeTab === "preview"
+                    ? "bg-[#2455FF] text-white"
+                    : "bg-white dark:bg-white/10 border border-slate-200 dark:border-[#2455FF]/20 text-slate-600 dark:text-white/70 hover:bg-slate-50"
+                }`}
+              >
+                Document
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("visualizer")}
+                className={`px-3 py-1 text-[11px] font-mono rounded-lg transition ${
+                  activeTab === "visualizer"
+                    ? "bg-[#2455FF] text-white"
+                    : "bg-white dark:bg-white/10 border border-slate-200 dark:border-[#2455FF]/20 text-slate-600 dark:text-white/70 hover:bg-slate-50"
+                }`}
+              >
+                Visual Blueprint
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 bp-grid bp-wash relative min-h-0" data-testid="prd-preview-render">
+            {activeTab === "preview" ? (
+              <article className="prose-doc max-w-none">{renderMd(edited)}</article>
+            ) : (
+              <div className="space-y-6 text-left">
+                <div className="flex items-center gap-2 px-3 py-2 bg-[#2455FF]/5 border border-[#2455FF]/15 rounded-xl">
+                  <Database className="h-4 w-4 text-[#2455FF]" />
+                  <div className="font-mono text-[9px] uppercase tracking-wider text-[#050a1a] dark:text-white">
+                    Parsed Requirements Node Graph Mapping
+                  </div>
+                </div>
+
+                {/* Animated system architecture layout */}
+                <div className="grid grid-cols-3 gap-4 relative min-h-[160px] p-4 bg-[#050a1a]/95 rounded-xl border border-[#2455FF]/20 overflow-hidden">
+                  <div className="absolute inset-0 bp-grid opacity-15 pointer-events-none" />
+
+                  {/* Node 1: Client UI */}
+                  <div className="flex flex-col items-center justify-center p-3 rounded-lg border border-[#2455FF]/40 bg-[#2455FF]/8 text-white relative z-10">
+                    <span className="font-cine text-[10px] tracking-widest text-[#00E5FF] font-bold">CLIENT APP</span>
+                    <span className="font-mono text-[7px] text-slate-400 mt-1">Web Portals</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#00E5FF] mt-2 animate-ping" />
+                  </div>
+
+                  {/* Node 2: Gateway */}
+                  <div className="flex flex-col items-center justify-center p-3 rounded-lg border border-cyan-500/40 bg-cyan-500/5 text-white relative z-10">
+                    <span className="font-cine text-[10px] tracking-widest text-cyan-400 font-bold">API GATEWAY</span>
+                    <span className="font-mono text-[7px] text-slate-400 mt-1">LUMI Engine Router</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-2 animate-pulse" />
+                  </div>
+
+                  {/* Node 3: Database */}
+                  <div className="flex flex-col items-center justify-center p-3 rounded-lg border border-emerald-500/40 bg-emerald-500/5 text-white relative z-10">
+                    <span className="font-cine text-[10px] tracking-widest text-emerald-400 font-bold">DATABASE</span>
+                    <span className="font-mono text-[7px] text-slate-400 mt-1">Postgres Tenant</span>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-2 animate-pulse" />
+                  </div>
+                </div>
+
+                {/* Database tables mock inspector */}
+                <div className="border border-slate-200 dark:border-[#2455FF]/20 rounded-xl p-4 bg-white/70 dark:bg-[#050a1a]/70 backdrop-blur-sm space-y-3">
+                  <div className="font-mono text-[9px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Extracted Database Tables Schema
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="border border-[#2455FF]/10 rounded-lg p-2.5 bg-slate-50/50 dark:bg-white/5">
+                      <div className="font-mono text-[10.5px] font-semibold text-[#2455FF] border-b pb-1 mb-1">
+                        users
+                      </div>
+                      <div className="font-mono text-[9px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                        <div>id: UUID (PK)</div>
+                        <div>name: VARCHAR(255)</div>
+                        <div>phone: VARCHAR(30)</div>
+                        <div>created_at: TIMESTAMP</div>
+                      </div>
+                    </div>
+                    <div className="border border-[#2455FF]/10 rounded-lg p-2.5 bg-slate-50/50 dark:bg-white/5">
+                      <div className="font-mono text-[10.5px] font-semibold text-[#2455FF] border-b pb-1 mb-1">
+                        sessions
+                      </div>
+                      <div className="font-mono text-[9px] text-slate-500 dark:text-slate-400 space-y-0.5">
+                        <div>id: UUID (PK)</div>
+                        <div>user_id: UUID (FK)</div>
+                        <div>status: VARCHAR(50)</div>
+                        <div>turn_count: INT</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

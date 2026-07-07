@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTheme } from "next-themes";
 import {
   ArrowUpRight,
   LogOut,
@@ -12,7 +13,9 @@ import {
   HelpCircle,
   ChevronDown,
   Menu,
-  X
+  X,
+  Sun,
+  Moon
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -53,6 +56,8 @@ const Avatar = ({ user, size = "h-8 w-8", textClass = "text-[14px]" }) => {
 export const Navbar = ({ user, onLoginClick, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
   const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -134,7 +139,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: Bell,
       onClick: () => {
         setDropdownOpen(false);
-        toast.info("Notifications panel opened.");
+        setIsNotificationsOpen(true);
       },
     },
     {
@@ -215,6 +220,19 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
 
           {/* ============ RIGHT — User Avatar or Say Your Name ============ */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-xl bg-[#050a1a]/5 dark:bg-white/5 hover:bg-[#050a1a]/10 dark:hover:bg-white/10 text-[#050a1a] dark:text-white transition focus:outline-none focus:ring-2 focus:ring-[#2455FF]/40"
+              aria-label="Toggle dark/light theme"
+              data-testid="navbar-theme-toggle"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4 text-[#00E5FF]" />
+              ) : (
+                <Moon className="h-4 w-4 text-[#2455FF]" />
+              )}
+            </button>
+
             {!user ? (
               <button
                 onClick={onLoginClick}
@@ -350,6 +368,90 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
                   </a>
                 ))}
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Sliding Notifications Drawer */}
+        <AnimatePresence>
+          {isNotificationsOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[160] flex justify-end bg-[#050a1a]/30 backdrop-blur-sm"
+            >
+              <button
+                onClick={() => setIsNotificationsOpen(false)}
+                className="absolute inset-0 cursor-default outline-none bg-transparent border-0"
+                aria-label="Close notifications overlay"
+              />
+              
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "tween", duration: 0.25 }}
+                className="w-full max-w-[360px] h-full bg-white/95 dark:bg-[#050a1a]/95 border-l border-[#2455FF]/12 shadow-2xl relative z-10 flex flex-col p-5 text-left"
+              >
+                <div className="flex items-center justify-between border-b border-[#2455FF]/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-[#2455FF]" />
+                    <span className="font-cine text-[14px] tracking-wider text-[#050a1a] dark:text-white uppercase font-bold">
+                      System logs & alerts
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsNotificationsOpen(false)}
+                    className="h-8 w-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center text-slate-500 hover:text-slate-900 transition"
+                    aria-label="Close notifications"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto py-4 space-y-3">
+                  <div className="p-3 rounded-xl border border-[#2455FF]/15 bg-[#2455FF]/5 text-xs space-y-1">
+                    <div className="flex justify-between font-mono text-[9px] text-[#2455FF] font-semibold">
+                      <span>INTAKE ENGINE STATUS</span>
+                      <span>JUST NOW</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-350 leading-normal">
+                      AI session intake analysis completed. Product Requirements Document (PRD) is compiled and ready for review in Studio.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-emerald-500/15 bg-emerald-500/5 text-xs space-y-1">
+                    <div className="flex justify-between font-mono text-[9px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                      <span>SOW CONTRACT SIGNED</span>
+                      <span>1 hour ago</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-350 leading-normal">
+                      Super Admin approved milestone and signed Statement of Work contract terms for staged workspace node.
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl border border-cyan-500/15 bg-cyan-500/5 text-xs space-y-1">
+                    <div className="flex justify-between font-mono text-[9px] text-cyan-600 dark:text-cyan-400 font-semibold">
+                      <span>GPU CLUSTER ESTIMATOR</span>
+                      <span>2 hours ago</span>
+                    </div>
+                    <p className="text-slate-700 dark:text-slate-350 leading-normal">
+                      Interactive custom compute deployment configurations registered successfully on AI Infra console.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    toast.success("Logs cleared.");
+                    setIsNotificationsOpen(false);
+                  }}
+                  className="w-full py-2.5 bg-[#2455FF] hover:bg-[#1a44e0] text-white font-mono text-xs uppercase tracking-wider rounded-xl transition font-semibold"
+                >
+                  Clear all alerts
+                </button>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
