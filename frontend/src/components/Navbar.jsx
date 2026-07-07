@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useTheme } from "next-themes";
 import {
   ArrowUpRight,
   LogOut,
@@ -13,9 +12,7 @@ import {
   HelpCircle,
   ChevronDown,
   Menu,
-  X,
-  Sun,
-  Moon
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,7 +54,6 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
   const dropdownRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -220,19 +216,6 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
 
           {/* ============ RIGHT — User Avatar or Say Your Name ============ */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2 rounded-xl bg-[#050a1a]/5 dark:bg-white/5 hover:bg-[#050a1a]/10 dark:hover:bg-white/10 text-[#050a1a] dark:text-white transition focus:outline-none focus:ring-2 focus:ring-[#2455FF]/40"
-              aria-label="Toggle dark/light theme"
-              data-testid="navbar-theme-toggle"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4 text-[#00E5FF]" />
-              ) : (
-                <Moon className="h-4 w-4 text-[#2455FF]" />
-              )}
-            </button>
-
             {!user ? (
               <button
                 onClick={onLoginClick}
