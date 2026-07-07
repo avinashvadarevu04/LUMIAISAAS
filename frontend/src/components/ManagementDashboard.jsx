@@ -897,7 +897,7 @@ export default function ManagementDashboard({ isAdminOnly = false }) {
       {/* Workspace Panel */}
       <div className="flex-1 lg:pl-64 flex flex-col min-w-0 h-screen overflow-hidden relative z-10">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between bg-[#f8faff]/85 backdrop-blur-xl px-5 sm:px-8 shadow-sm">
+        <header className="sticky top-0 z-30 flex h-[72px] shrink-0 items-center justify-between border-b border-[#2455FF]/10 bg-[#f8faff]/85 backdrop-blur-xl px-5 sm:px-8">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobile(true)} className="lg:hidden text-[#050a1a]/60">
               <Menu size={20} />
