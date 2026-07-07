@@ -229,6 +229,16 @@ export default function AIInfraPage() {
   const [filtering, setFiltering] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
 
+  const [gpuCount, setGpuCount] = useState(1);
+  const [ssdSize, setSsdSize] = useState(2);
+
+  useEffect(() => {
+    if (selectedService) {
+      setGpuCount(1);
+      setSsdSize(2);
+    }
+  }, [selectedService]);
+
   // Trigger loading skeleton on filter change
   useEffect(() => {
     setFiltering(true);
@@ -247,6 +257,25 @@ export default function AIInfraPage() {
     setUser(null);
     toast("Signed out.", { description: "See you in the lab.", duration: 2400 });
   };
+
+  const getCalculatedPrice = () => {
+    if (!selectedService) return null;
+    let hourlyBase = 0;
+    if (selectedService.gpu === "H100") hourlyBase = 2.35;
+    else if (selectedService.gpu === "A100") hourlyBase = 1.40;
+    else if (selectedService.gpu === "L40S") hourlyBase = 0.95;
+    else return null;
+
+    const hourlySSD = ssdSize * 0.03;
+    const totalHourly = (hourlyBase * gpuCount) + hourlySSD;
+    const totalMonthly = totalHourly * 730;
+    return {
+      hourly: totalHourly.toFixed(2),
+      monthly: Math.round(totalMonthly).toLocaleString(),
+    };
+  };
+
+  const dynamicPrice = getCalculatedPrice();
 
   const handleLoginSubmit = async (payload) => {
     if (payload.isGoogle) {
@@ -734,19 +763,117 @@ export default function AIInfraPage() {
 
                 {/* Main Body */}
                 <div className="space-y-4">
-                  <div>
+<div>
                     <span className="font-mono text-[10px] uppercase tracking-widest text-[#050a1a]/50">Overview</span>
                     <p className="mt-1 text-[13px] leading-relaxed text-[#050a1a]/70">
                       {selectedService.overview}
                     </p>
-                  </div>
+                  </div>                  {/* Interactive Cluster Configurator or Blueprint Diagram */}
+                  {selectedService.gpu && selectedService.gpu !== "None" ? (
+                    <div className="border border-[#2455FF]/15 bg-[#2455FF]/5 rounded-2xl p-4 space-y-4">
+                      <div className="flex items-center justify-between border-b border-[#2455FF]/10 pb-2">
+                        <span className="font-cine text-[13px] tracking-wider text-[#050a1a] uppercase font-bold">
+                          Configure Node Cluster
+                        </span>
+                        <span className="font-mono text-[9.5px] text-[#2455FF] font-semibold bg-[#2455FF]/8 px-2 py-0.5 rounded">
+                          DEPLOYABLE ESTIMATOR
+                        </span>
+                      </div>
 
-                  {/* Architecture Placeholder */}
-                  <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center py-6">
-                    <CloudLightning className="h-6 w-6 text-[#2455FF]/50 mb-1.5 animate-pulse" />
-                    <span className="font-cine text-[12px] tracking-wider text-[#050a1a]">Isolated Tenant Architecture Diagram</span>
-                    <span className="font-mono text-[9px] uppercase text-[#050a1a]/40 tracking-wider">Deployable Node Context</span>
-                  </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Control 1: GPU Count */}
+                        <div className="space-y-1.5">
+                          <label className="block font-mono text-[9.5px] uppercase text-slate-500">
+                            NVIDIA {selectedService.gpu} Count: <span className="font-sans font-semibold text-[#050a1a]">{gpuCount}x</span>
+                          </label>
+                          <div className="flex gap-2">
+                            {[1, 2, 4, 8].map((num) => (
+                              <button
+                                key={num}
+                                type="button"
+                                onClick={() => setGpuCount(num)}
+                                className={`flex-1 py-1.5 text-xs font-mono rounded-lg border transition ${
+                                  gpuCount === num
+                                    ? "bg-[#2455FF] border-[#2455FF] text-white font-bold"
+                                    : "bg-white border-[#2455FF]/15 hover:bg-slate-50 text-slate-600"
+                                }`}
+                              >
+                                {num}x
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Control 2: SSD Storage */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between font-mono text-[9.5px] uppercase text-slate-500">
+                            <span>NVMe SSD Storage:</span>
+                            <span className="font-sans font-semibold text-[#050a1a]">{ssdSize} TB</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="1"
+                            max="16"
+                            step="1"
+                            value={ssdSize}
+                            onChange={(e) => setSsdSize(parseInt(e.target.value))}
+                            className="w-full h-1.5 bg-[#2455FF]/15 rounded-lg appearance-none cursor-pointer accent-[#2455FF] focus:outline-none"
+                          />
+                          <div className="flex justify-between text-[8.5px] font-mono text-slate-400">
+                            <span>1 TB</span>
+                            <span>8 TB</span>
+                            <span>16 TB</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Interactive Visual Blueprint Map */}
+                      <div className="bg-[#050a1a]/95 border border-[#2455FF]/20 rounded-xl p-4 flex flex-col items-center justify-center relative overflow-hidden min-h-[140px]">
+                        {/* Blueprint background grid */}
+                        <div className="absolute inset-0 bp-grid opacity-20 pointer-events-none" />
+                        
+                        <div className="relative flex flex-wrap items-center justify-center gap-4 z-10 w-full max-w-[320px]">
+                          {/* GPUs map */}
+                          <div className="flex flex-wrap items-center justify-center gap-2 max-w-[200px]">
+                            {Array.from({ length: gpuCount }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="w-10 h-10 rounded-lg bg-[#2455FF]/10 border border-[#2455FF]/50 flex flex-col items-center justify-center text-white ring-1 ring-[#00E5FF]/20 animate-pulse"
+                                style={{ animationDelay: `${i * 150}ms` }}
+                              >
+                                <span className="font-cine text-[9px] font-bold text-[#00E5FF]">GPU</span>
+                                <span className="font-mono text-[7px] text-[#2455FF]/70">#{i+1}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Connection line */}
+                          <div className="hidden sm:block h-px w-6 bg-gradient-to-r from-[#00E5FF]/40 to-[#2455FF]/40 border-dashed border-t" />
+
+                          {/* Storage Node */}
+                          <div className="w-12 h-12 rounded-xl bg-slate-900 border border-[#2455FF] flex flex-col items-center justify-center text-white relative">
+                            <Database className="h-4 w-4 text-[#2455FF]" />
+                            <span className="font-mono text-[8px] mt-0.5 text-slate-300">{ssdSize}TB</span>
+                            <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00E5FF] opacity-75" />
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2455FF]" />
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <span className="mt-2 font-mono text-[8.5px] text-[#00E5FF]/70 tracking-widest uppercase z-10 animate-pulse">
+                          NODE CONFIGURATION: ACTIVE SYNAPSE CONNECTED
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Default Blueprint Diagram */
+                    <div className="bg-slate-50 border border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center py-6">
+                      <CloudLightning className="h-6 w-6 text-[#2455FF]/50 mb-1.5 animate-pulse" />
+                      <span className="font-cine text-[12px] tracking-wider text-[#050a1a]">Isolated Tenant Architecture Diagram</span>
+                      <span className="font-mono text-[9px] uppercase text-[#050a1a]/40 tracking-wider">Deployable Node Context</span>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Key features */}
@@ -792,9 +919,13 @@ export default function AIInfraPage() {
               {/* Action Footer */}
               <div className="mt-6 pt-4 border-t border-[#2455FF]/10 flex flex-wrap gap-4 items-center justify-between">
                 <div>
-                  <span className="font-mono text-[9px] uppercase text-[#050a1a]/40 tracking-wider block">Price Model</span>
+                  <span className="font-mono text-[9px] uppercase text-[#050a1a]/40 tracking-wider block">
+                    {dynamicPrice ? "Custom Cluster Pricing" : "Price Model"}
+                  </span>
                   <span className="font-sans text-[13.5px] font-semibold text-[#2455FF]">
-                    {selectedService.pricingModel} ({selectedService.startingPrice})
+                    {dynamicPrice 
+                      ? `$${dynamicPrice.hourly}/hr (Est. $${dynamicPrice.monthly}/mo)`
+                      : `${selectedService.pricingModel} (${selectedService.startingPrice})`}
                   </span>
                 </div>
 
@@ -809,7 +940,14 @@ export default function AIInfraPage() {
                     onClick={() => {
                       const svc = selectedService;
                       setSelectedService(null);
-                      handleRequestService(svc);
+                      if (dynamicPrice) {
+                        toast.success(`Request submitted for ${svc.name}!`, {
+                          description: `Config: ${gpuCount}x GPU, ${ssdSize}TB storage. Our infrastructure team will contact you in 12 hours.`,
+                          duration: 6000
+                        });
+                      } else {
+                        handleRequestService(svc);
+                      }
                     }}
                     className="group px-4 py-2 bg-[#2455FF] hover:bg-[#1a44e0] text-white rounded-xl font-semibold text-[13px] transition flex items-center gap-1.5"
                   >
