@@ -453,7 +453,6 @@ export default function AIInfraPage() {
 
       {/* ===================== MARKETPLACE AREA ===================== */}
       <section id="marketplace" className="max-w-7xl mx-auto px-6 pb-24 relative z-10">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#2455FF]/15 to-transparent mb-12" />
 
         {/* Search Bar */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch justify-between mb-8">

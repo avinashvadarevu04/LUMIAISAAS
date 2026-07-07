@@ -186,7 +186,7 @@ const AccountHub = () => {
       <Navbar user={user} onLoginClick={() => {}} onLogout={() => { setUser(null); navigate("/"); }} />
 
       {/* Top Banner Grid */}
-      <div className="relative pt-24 pb-6 border-b border-[#2455FF]/12 bg-[#2455FF]/5">
+      <div className="relative pt-24 pb-6 bg-[#2455FF]/5">
         <div className="absolute inset-0 bp-grid opacity-15 pointer-events-none" />
         <div className="max-w-[1240px] mx-auto px-6 relative z-10">
           
@@ -230,7 +230,7 @@ const AccountHub = () => {
           </div>
 
           {/* Quick tab controls header */}
-          <div className="flex flex-wrap gap-1 mt-6 border-b border-[#2455FF]/10 pb-1">
+          <div className="flex flex-wrap gap-1 mt-6 pb-1">
             {[
               { key: "profile", label: "My Profile", icon: User },
               { key: "settings", label: "Account Settings", icon: Settings },
@@ -294,13 +294,13 @@ const AccountHub = () => {
               
               {/* Profile Details Edit Card (Takes 2 columns) */}
               <div className="lg:col-span-2 glass rounded-3xl p-6 border border-[#2455FF]/15 text-left space-y-6">
-                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2 mb-2">
+                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold mb-4">
                   Account Profile Identity
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {/* Picture Upload Sidebar */}
-                  <div className="flex flex-col items-center border-r border-[#2455FF]/10 pr-4 space-y-4">
+                  <div className="flex flex-col items-center pr-4 space-y-4">
                     <div className="relative h-28 w-28 rounded-full overflow-hidden ring-4 ring-[#2455FF]/20 shadow-lg shrink-0">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
@@ -532,7 +532,7 @@ const AccountHub = () => {
             
             {/* Section 1: Security */}
             <div className="space-y-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold mb-3">
                 Security & Verification
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -559,7 +559,7 @@ const AccountHub = () => {
 
             {/* Section 2: Appearance & Styling */}
             <div className="space-y-4">
-              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2">
+              <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold mb-3">
                 Preferences & Styling
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -619,7 +619,7 @@ const AccountHub = () => {
         {/* ================= TAB 4: NOTIFICATIONS ================= */}
         {activeTab === "notifications" && (
           <div className="glass rounded-3xl p-6 border border-[#2455FF]/15 text-left max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between border-b pb-2">
+            <div className="flex items-center justify-between mb-4">
               <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold">
                 Notification center
               </div>
@@ -729,7 +729,7 @@ const AccountHub = () => {
         {/* ================= TAB 5: BILLING ================= */}
         {activeTab === "billing" && (
           <div className="glass rounded-3xl p-6 border border-[#2455FF]/15 text-left max-w-4xl mx-auto space-y-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold mb-4">
               Subscription & Usage Console
             </div>
 
@@ -803,7 +803,7 @@ const AccountHub = () => {
         {/* ================= TAB 6: HELP & SUPPORT ================= */}
         {activeTab === "support" && (
           <div className="glass rounded-3xl p-6 border border-[#2455FF]/15 text-left max-w-4xl mx-auto space-y-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold border-b pb-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#2455FF] font-semibold mb-4">
               Help Center & Diagnostics
             </div>
 
@@ -878,7 +878,7 @@ const AccountHub = () => {
             
             {/* List Submitted Support Tickets */}
             {supportTickets.length > 0 && (
-              <div className="space-y-3.5 border-t pt-4 mt-6">
+              <div className="space-y-3.5 pt-4 mt-6">
                 <h3 className="font-semibold text-xs text-[#050a1a] dark:text-white uppercase font-mono tracking-wider">Submitted Support Tickets</h3>
                 <div className="space-y-2">
                   {supportTickets.map((t) => (

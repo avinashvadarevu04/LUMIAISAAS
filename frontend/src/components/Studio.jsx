@@ -779,7 +779,7 @@ export const Studio = () => {
     <div className="h-screen max-h-screen w-full flex flex-col bg-white overflow-hidden">
       {/* slim top bar — no black square */}
       <header
-        className="border-b border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-4 py-2.5 flex items-center justify-between"
+        className="bg-white/70 backdrop-blur-md shadow-sm px-4 py-2.5 flex items-center justify-between"
         data-testid="studio-topbar"
       >
         <div className="flex items-center gap-3">
@@ -911,7 +911,7 @@ export const Studio = () => {
               {/* Composer */}
               <form
                 onSubmit={sendMessage}
-                className="border-t border-[#2455FF]/12 bg-white/70 backdrop-blur-md px-4 sm:px-8 py-4"
+                className="bg-white/70 backdrop-blur-md shadow-[0_-4px_24px_-8px_rgba(36,85,255,0.12)] px-4 sm:px-8 py-4"
                 data-testid="studio-composer"
               >
                 {/* Attachment chips */}

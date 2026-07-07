@@ -13,7 +13,7 @@ export default function Sidebar({ user, nav, activeTab, setTab, mobileOpen, setM
 
       {/* Sidebar container */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-[#2455FF]/10 bg-white/90 p-4 backdrop-blur-xl transition-transform duration-200 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-white/90 p-4 backdrop-blur-xl transition-transform duration-200 lg:translate-x-0 shadow-[4px_0_24px_-10px_rgba(36,85,255,0.15)] ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
