@@ -5,6 +5,7 @@ import Hero from "@/components/Hero";
 import Studio from "@/components/Studio";
 import ManagementDashboard from "@/components/ManagementDashboard";
 import AIInfraPage from "@/components/AIInfraPage";
+import CommandPalette from "@/components/CommandPalette";
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         }}
       />
       <BrowserRouter>
+        <CommandPalette />
         <Routes>
           <Route path="/" element={<Hero />} />
           <Route path="/studio" element={<Studio />} />
