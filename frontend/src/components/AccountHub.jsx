@@ -186,8 +186,7 @@ const AccountHub = () => {
       <Navbar user={user} onLoginClick={() => {}} onLogout={() => { setUser(null); navigate("/"); }} />
 
       {/* Top Banner Grid */}
-      <div className="relative pt-24 pb-6 bg-[#2455FF]/5">
-        <div className="absolute inset-0 bp-grid opacity-15 pointer-events-none" />
+      <div className="relative pt-24 pb-6 bg-transparent">
         <div className="max-w-[1240px] mx-auto px-6 relative z-10">
           
           {/* User console Header Card */}
