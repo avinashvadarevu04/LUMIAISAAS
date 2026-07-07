@@ -115,7 +115,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: LayoutDashboard,
       onClick: () => {
         setDropdownOpen(false);
-        navigate("/dashboard");
+        navigate("/account?tab=dashboard");
       },
     },
     {
@@ -123,7 +123,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: User,
       onClick: () => {
         setDropdownOpen(false);
-        toast.info("Profile settings opened.");
+        navigate("/account?tab=profile");
       },
     },
     {
@@ -131,7 +131,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: Settings,
       onClick: () => {
         setDropdownOpen(false);
-        toast.info("Account settings opened.");
+        navigate("/account?tab=settings");
       },
     },
     {
@@ -139,7 +139,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: Bell,
       onClick: () => {
         setDropdownOpen(false);
-        setIsNotificationsOpen(true);
+        navigate("/account?tab=notifications");
       },
     },
     {
@@ -147,7 +147,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: CreditCard,
       onClick: () => {
         setDropdownOpen(false);
-        toast.info("Billing details opened.");
+        navigate("/account?tab=billing");
       },
     },
     {
@@ -155,7 +155,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
       icon: HelpCircle,
       onClick: () => {
         setDropdownOpen(false);
-        toast.info("Help & Support opened.");
+        navigate("/account?tab=support");
       },
     },
   ];

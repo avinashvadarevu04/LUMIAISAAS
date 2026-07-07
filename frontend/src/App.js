@@ -7,6 +7,7 @@ import Studio from "@/components/Studio";
 import ManagementDashboard from "@/components/ManagementDashboard";
 import AIInfraPage from "@/components/AIInfraPage";
 import CommandPalette from "@/components/CommandPalette";
+import AccountHub from "@/components/AccountHub";
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
             <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<ManagementDashboard />} />
             <Route path="/ai-infra" element={<AIInfraPage />} />
+            <Route path="/account" element={<AccountHub />} />
           </Routes>
         </BrowserRouter>
       </div>
