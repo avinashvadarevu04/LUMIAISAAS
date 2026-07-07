@@ -26,9 +26,10 @@ const NAV_ITEMS = [
   { label: "AI Infra", href: "/ai-infra", isRoute: true },
 ];
 
-const Avatar = ({ user, size = "h-8 w-8", textClass = "text-[14px]" }) => {
+const Avatar = ({ user, size = "h-8 w-8", textClass = "text-[12px]" }) => {
   const [hasError, setHasError] = useState(false);
-  const picture = user?.picture || user?.customPicture;
+  const storedAvatar = typeof window !== "undefined" ? localStorage.getItem("lumi.avatar.url") : null;
+  const picture = storedAvatar || user?.picture || user?.customPicture;
 
   if (picture && !hasError) {
     return (

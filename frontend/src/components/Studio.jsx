@@ -59,6 +59,7 @@ const Sidebar = ({
   onCloseMobileDrawer,
 }) => {
   const prdDoc = (documents || []).find((d) => d.type === "PRD");
+  const customAvatar = typeof window !== "undefined" ? localStorage.getItem("lumi.avatar.url") : null;
 
   const handlePickSession = (s) => {
     onPickSession?.(s);
@@ -95,7 +96,7 @@ const Sidebar = ({
         data-testid="studio-user-card"
       >
         <span className="relative h-10 w-10 rounded-full overflow-hidden ring-2 ring-[#2455FF]/30 shrink-0">
-          <img src={JESSE_DP} alt={user?.name} className="h-full w-full object-cover" draggable="false" />
+          <img src={customAvatar || JESSE_DP} alt={user?.name} className="h-full w-full object-cover animate-in fade-in" draggable="false" />
           <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#25D366] ring-2 ring-white" />
         </span>
         <div className="leading-tight min-w-0 flex-1">
