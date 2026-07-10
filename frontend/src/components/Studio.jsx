@@ -19,6 +19,9 @@ import {
   Layers,
   Menu,
   Database,
+  Download,
+  Edit3,
+  Printer
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -288,18 +291,56 @@ const PRDPreview = ({ prd, sessionId, onSent, onBack }) => {
             </div>
           </div>
         </div>
-        <button
-          onClick={send}
-          disabled={sending}
-          data-testid="prd-send-btn"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1fbb5a] disabled:opacity-50 text-white px-4 py-2.5 text-[13px] font-semibold transition shadow-[0_10px_30px_-12px_rgba(37,211,102,0.6)]"
-        >
-          {sending ? (
-            <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.6} /> Sending…</>
-          ) : (
-            <><Send className="h-4 w-4" strokeWidth={2.6} /> Send to Team</>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const printWindow = window.open("", "_blank");
+              printWindow.document.write(`
+                <html>
+                  <head>
+                    <title>${prd?.title || "PRD Document"}</title>
+                    <style>
+                      body { font-family: monospace; padding: 40px; color: #050a1a; line-height: 1.6; }
+                      h1 { color: #2455FF; font-size: 24px; border-bottom: 2px solid #2455FF; padding-bottom: 8px; }
+                      h2 { color: #050a1a; font-size: 18px; margin-top: 24px; border-bottom: 1px solid #eee; }
+                      p { font-size: 13px; margin-bottom: 12px; }
+                    </style>
+                  </head>
+                  <body>
+                    <h1>${prd?.title || "Product Requirements Document"}</h1>
+                    ${edited.split("\n").map(line => {
+                      if (line.startsWith("# ")) return `<h1>${line.slice(2)}</h1>`;
+                      if (line.startsWith("## ")) return `<h2>${line.slice(3)}</h2>`;
+                      if (line.startsWith("---")) return `<hr/>`;
+                      if (!line.trim()) return `<br/>`;
+                      return `<p>${line}</p>`;
+                    }).join("")}
+                    <script>window.print();</script>
+                  </body>
+                </html>
+              `);
+              printWindow.document.close();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#2455FF]/15 bg-white hover:bg-slate-50 text-xs px-3.5 py-2 font-mono text-[#050a1a]/70 transition shadow-sm"
+            title="Print PDF specs"
+          >
+            <Printer size={13} className="text-[#2455FF]" />
+            <span>Print / PDF</span>
+          </button>
+          
+          <button
+            onClick={send}
+            disabled={sending}
+            data-testid="prd-send-btn"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] hover:bg-[#1fbb5a] disabled:opacity-50 text-white px-4 py-2.5 text-[13px] font-semibold transition shadow-[0_10px_30px_-12px_rgba(37,211,102,0.6)]"
+          >
+            {sending ? (
+              <><Loader2 className="h-4 w-4 animate-spin" strokeWidth={2.6} /> Sending…</>
+            ) : (
+              <><Send className="h-4 w-4" strokeWidth={2.6} /> Send to Team</>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 grid lg:grid-cols-2 gap-0 overflow-hidden min-h-0">
@@ -423,6 +464,44 @@ const PRDPreview = ({ prd, sessionId, onSent, onBack }) => {
 };
 
 const DocViewer = ({ type, document: doc, onClose }) => {
+  const [editMode, setEditMode] = useState(false);
+  const [editedBody, setEditedBody] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (doc) {
+      setEditedBody(doc.body_markdown || "");
+      setEditMode(false);
+    }
+  }, [doc]);
+
+  const handleSaveDoc = async () => {
+    if (!doc) return;
+    setSaving(true);
+    try {
+      await axios.patch(`${process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"}/api/documents/${doc.id}`, {
+        body_markdown: editedBody
+      });
+      toast.success("Document modifications saved successfully");
+      doc.body_markdown = editedBody; // optimistic update
+      setEditMode(false);
+    } catch (err) {
+      toast.error("Couldn't save document changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const renderMd = (text) =>
+    (text || "").split("\n").map((line, i) => {
+      if (line.startsWith("# ")) return <h1 key={i} className="font-display text-2xl text-[#050a1a] mb-2">{line.slice(2)}</h1>;
+      if (line.startsWith("## ")) return <h2 key={i} className="font-cine text-base tracking-[0.1em] text-[#2455FF] mt-4 mb-2">{line.slice(3)}</h2>;
+      if (line.startsWith("---")) return <hr key={i} className="my-4 border-[#2455FF]/15" />;
+      if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#050a1a]/65">{line.replace(/\*\*/g, "")}</p>;
+      if (!line.trim()) return <div key={i} className="h-2" />;
+      return <p key={i} className="text-[13px] text-[#050a1a]/85 leading-relaxed mb-1">{line}</p>;
+    });
+
   return (
     <AnimatePresence>
       {type && (
@@ -439,29 +518,95 @@ const DocViewer = ({ type, document: doc, onClose }) => {
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 10, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.2, 0.8, 0.2, 1] }}
-            className="relative glass-strong rounded-2xl w-full max-w-[860px] max-h-[85vh] overflow-hidden flex flex-col"
+            className="relative glass-strong rounded-2xl w-full max-w-[920px] h-[85vh] overflow-hidden flex flex-col bg-white"
           >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[#2455FF]/12">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#2455FF]/12 bg-white/70">
               <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#2455FF]/70">{type}</div>
+                <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-[#2455FF]/70">{type} Specifications</div>
                 <div className="font-cine text-[18px] tracking-[0.06em] text-[#050a1a] leading-none mt-0.5">
                   {doc?.title || `${type}`}
                 </div>
               </div>
-              <button onClick={onClose} aria-label="Close" data-testid="doc-viewer-close" className="h-8 w-8 rounded-full bg-white/60 ring-1 ring-[#2455FF]/15 hover:bg-white flex items-center justify-center text-[#050a1a]/60 hover:text-[#2455FF] transition">
-                <X className="h-4 w-4" strokeWidth={2.4} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const printWindow = window.open("", "_blank");
+                    printWindow.document.write(`
+                      <html>
+                        <head>
+                          <title>${doc?.title || "Document"}</title>
+                          <style>
+                            body { font-family: monospace; padding: 40px; color: #050a1a; line-height: 1.6; }
+                            h1 { color: #2455FF; font-size: 24px; border-bottom: 2px solid #2455FF; padding-bottom: 8px; }
+                            h2 { color: #050a1a; font-size: 18px; margin-top: 24px; border-bottom: 1px solid #eee; }
+                            p { font-size: 13px; margin-bottom: 12px; }
+                          </style>
+                        </head>
+                        <body>
+                          <h1>${doc?.title || "Product Specs"}</h1>
+                          ${editedBody.split("\n").map(line => {
+                            if (line.startsWith("# ")) return `<h1>${line.slice(2)}</h1>`;
+                            if (line.startsWith("## ")) return `<h2>${line.slice(3)}</h2>`;
+                            if (line.startsWith("---")) return `<hr/>`;
+                            if (!line.trim()) return `<br/>`;
+                            return `<p>${line}</p>`;
+                          }).join("")}
+                          <script>window.print();</script>
+                        </body>
+                      </html>
+                    `);
+                    printWindow.document.close();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#2455FF]/15 px-3 py-1.5 font-mono text-[11px] hover:bg-slate-50 transition text-[#050a1a]/70"
+                >
+                  <Printer size={12} className="text-[#2455FF]" />
+                  <span>Print PDF</span>
+                </button>
+
+                <button
+                  onClick={() => setEditMode(!editMode)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-[#2455FF]/15 px-3 py-1.5 font-mono text-[11px] hover:bg-slate-50 transition text-[#050a1a]/70"
+                >
+                  <Edit3 size={12} className="text-[#2455FF]" />
+                  <span>{editMode ? "View Layout" : "Edit Specs"}</span>
+                </button>
+
+                {editMode && (
+                  <button
+                    onClick={handleSaveDoc}
+                    disabled={saving}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#2455FF] text-white px-3.5 py-1.5 font-mono text-[11px] hover:bg-[#1a44e0] transition disabled:opacity-50"
+                  >
+                    {saving ? "Saving..." : "Save Edits"}
+                  </button>
+                )}
+
+                <button onClick={onClose} aria-label="Close" data-testid="doc-viewer-close" className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-[#050a1a]/60 hover:text-[#2455FF] transition">
+                  <X className="h-4 w-4" strokeWidth={2.4} />
+                </button>
+              </div>
             </div>
-            <div className="overflow-y-auto p-6 bp-grid bp-wash flex-1" data-testid="doc-viewer-body">
-              {(doc?.body_markdown || "_Loading…_").split("\n").map((line, i) => {
-                if (line.startsWith("# ")) return <h1 key={i} className="font-display text-2xl text-[#050a1a] mb-2">{line.slice(2)}</h1>;
-                if (line.startsWith("## ")) return <h2 key={i} className="font-cine text-base tracking-[0.1em] text-[#2455FF] mt-4 mb-2">{line.slice(3)}</h2>;
-                if (line.startsWith("---")) return <hr key={i} className="my-4 border-[#2455FF]/15" />;
-                if (line.startsWith("**") && line.endsWith("**")) return <p key={i} className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#050a1a]/65">{line.replace(/\*\*/g, "")}</p>;
-                if (!line.trim()) return <div key={i} className="h-2" />;
-                return <p key={i} className="text-[13px] text-[#050a1a]/85 leading-relaxed mb-1">{line}</p>;
-              })}
-            </div>
+            
+            {editMode ? (
+              <div className="flex-1 grid grid-cols-2 overflow-hidden min-h-0">
+                <div className="border-r border-[#2455FF]/12 p-4 flex flex-col min-h-0 bg-slate-50/50">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400 block mb-2">RAW MARKDOWN EDITOR</span>
+                  <textarea
+                    value={editedBody}
+                    onChange={(e) => setEditedBody(e.target.value)}
+                    className="flex-1 w-full rounded-xl bg-white border border-slate-200 p-4 font-mono text-[12px] leading-relaxed text-[#050a1a] outline-none focus:ring-2 focus:ring-[#2455FF]/30 resize-none shadow-inner"
+                  />
+                </div>
+                <div className="overflow-y-auto p-6 bg-white flex-1 bp-grid bp-wash">
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-slate-400 block mb-3">COMPILED PREVIEW</span>
+                  <article className="prose-doc max-w-none">{renderMd(editedBody)}</article>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-y-auto p-6 bp-grid bp-wash flex-1 bg-white" data-testid="doc-viewer-body">
+                {renderMd(editedBody)}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

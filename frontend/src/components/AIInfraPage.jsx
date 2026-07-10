@@ -229,6 +229,10 @@ export default function AIInfraPage() {
   // UI loading state
   const [filtering, setFiltering] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
+  const [provisioningService, setProvisioningService] = useState(null);
+  const [terminalLogs, setTerminalLogs] = useState([]);
+  const [provisioningProgress, setProvisioningProgress] = useState(0);
+  const [provisioningDone, setProvisioningDone] = useState(false);
 
   const [gpuCount, setGpuCount] = useState(1);
   const [ssdSize, setSsdSize] = useState(2);
@@ -329,15 +333,42 @@ export default function AIInfraPage() {
     }
   };
 
+  const startProvisioningSim = (service) => {
+    setProvisioningService(service);
+    setTerminalLogs(["[SYSTEM] Initializing secure telemetry handshake...", "[SYSTEM] Connecting to Lupus US-East Datacenter..."]);
+    setProvisioningProgress(5);
+    setProvisioningDone(false);
+    
+    const logsSequence = [
+      { prg: 15, log: "[SSH] Key exchanges validated (Ed25519)." },
+      { prg: 30, log: "[SYSTEM] Querying hardware resource nodes... 8x NVIDIA H100 SXM5 identified." },
+      { prg: 45, log: "[DOCKER] Pulling preconfigured ML-workspace runtime image..." },
+      { prg: 65, log: "[KERNEL] Compiling CUDA 12.2 and device link drivers..." },
+      { prg: 80, log: "[STORAGE] Attaching NVMe cache blocks (1.2 TB raid-0 array)..." },
+      { prg: 90, log: "[NET] Assigning floating IP target: 64.120.45.18..." },
+      { prg: 100, log: "[SYSTEM] Node online. Access string: ssh root@64.120.45.18 -p 2222" }
+    ];
+    
+    let step = 0;
+    const interval = setInterval(() => {
+      if (step >= logsSequence.length) {
+        clearInterval(interval);
+        setProvisioningDone(true);
+        return;
+      }
+      const item = logsSequence[step];
+      setTerminalLogs(prev => [...prev, item.log]);
+      setProvisioningProgress(item.prg);
+      step++;
+    }, 1000);
+  };
+
   const handleRequestService = (service) => {
     if (!user) {
       openLogin();
       return;
     }
-    toast.success(`Request submitted for ${service.name}!`, {
-      description: "Our infrastructure team will contact you in 12 hours.",
-      duration: 5000
-    });
+    startProvisioningSim(service);
   };
 
   // Filter logic
@@ -1110,6 +1141,75 @@ export default function AIInfraPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Provisioning Simulator / Terminal SSH Console Overlay */}
+      <AnimatePresence>
+        {provisioningService && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050a1a]/85 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-2xl rounded-2xl bg-[#050a1a] border border-[#2455FF]/30 shadow-2xl overflow-hidden flex flex-col h-[480px] text-white"
+            >
+              {/* Header Bar */}
+              <div className="bg-[#0b1530] border-b border-[#2455FF]/20 px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-rose-500" />
+                  <span className="h-3 w-3 rounded-full bg-amber-500" />
+                  <span className="h-3 w-3 rounded-full bg-emerald-500" />
+                  <span className="font-mono text-xs text-slate-400 ml-2">ssh root@lumi-cloud-node:~/provision</span>
+                </div>
+                {provisioningDone && (
+                  <button
+                    onClick={() => setProvisioningService(null)}
+                    className="text-slate-400 hover:text-white rounded p-1"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              {/* Console Body */}
+              <div className="flex-1 p-6 font-mono text-xs overflow-y-auto space-y-2 bg-[#050a1a]">
+                {terminalLogs.map((log, idx) => (
+                  <div key={idx} className="leading-relaxed animate-in fade-in slide-in-from-left-1 duration-150">
+                    <span className="text-[#2455FF] mr-2">➜</span>
+                    <span className={log.includes("[SYSTEM]") ? "text-emerald-400" : log.includes("[SSH]") ? "text-cyan-400" : "text-slate-200"}>{log}</span>
+                  </div>
+                ))}
+                {!provisioningDone && (
+                  <div className="flex items-center gap-2 text-slate-400 pt-2">
+                    <Loader2 size={12} className="animate-spin text-[#2455FF]" />
+                    <span>Provisioning node... {provisioningProgress}%</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Progress Bar & Footer */}
+              <div className="border-t border-[#2455FF]/20 bg-[#0b1530] p-4 flex items-center justify-between gap-4">
+                <div className="flex-1 bg-[#050a1a] h-2 rounded-full overflow-hidden border border-[#2455FF]/10">
+                  <div
+                    style={{ width: `${provisioningProgress}%` }}
+                    className="h-full bg-gradient-to-r from-[#2455FF] to-[#00E5FF] transition-all duration-300 rounded-full"
+                  />
+                </div>
+                {provisioningDone ? (
+                  <button
+                    onClick={() => setProvisioningService(null)}
+                    className="bg-[#2455FF] hover:bg-[#1a44e0] text-white px-4 py-2 rounded-xl text-xs font-semibold font-mono tracking-wider transition"
+                  >
+                    DISMISS CONSOLE
+                  </button>
+                ) : (
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">PROVISIONING...</span>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <Footer />
     </div>
   );

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { useUser } from "@/lib/userStore";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
@@ -101,8 +102,18 @@ const AccountHub = () => {
 
   const [supportTickets, setSupportTickets] = useState([]);
   const [newTicket, setNewTicket] = useState({ subject: "", category: "billing", desc: "" });
+  const [telemetry, setTelemetry] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    axios.get(`${process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"}/api/client-telemetry/${user.id}`)
+      .then(res => {
+        setTelemetry(res.data);
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
   // Sync back profile changes to store
   useEffect(() => {
@@ -269,24 +280,24 @@ const AccountHub = () => {
             {/* statistics cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="glass rounded-2xl p-4 text-left relative overflow-hidden border border-[#2455FF]/15">
-                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Active Workspace Nodes</div>
-                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">3</div>
-                <div className="font-mono text-[8px] text-emerald-600 mt-0.5">All servers online</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Active Workspace Projects</div>
+                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">{telemetry ? telemetry.projects_count : 0}</div>
+                <div className="font-mono text-[8px] text-emerald-600 mt-0.5">Live development units</div>
               </div>
               <div className="glass rounded-2xl p-4 text-left relative overflow-hidden border border-[#2455FF]/15">
                 <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Completed PRDs</div>
-                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">8</div>
+                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">{telemetry ? telemetry.prds_count : 0}</div>
                 <div className="font-mono text-[8px] text-slate-500 mt-0.5">Sent to build team</div>
               </div>
               <div className="glass rounded-2xl p-4 text-left relative overflow-hidden border border-[#2455FF]/15">
-                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Pending Actions</div>
-                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">2</div>
-                <div className="font-mono text-[8px] text-amber-600 mt-0.5">Milestone reviews pending</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Intake Chats</div>
+                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">{telemetry ? telemetry.sessions_count : 0}</div>
+                <div className="font-mono text-[8px] text-amber-600 mt-0.5">Workspace intake sessions</div>
               </div>
               <div className="glass rounded-2xl p-4 text-left relative overflow-hidden border border-[#2455FF]/15">
-                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Active Team Nodes</div>
-                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">12</div>
-                <div className="font-mono text-[8px] text-[#2455FF] mt-0.5">Lab members linked</div>
+                <div className="font-mono text-[9px] uppercase tracking-wider text-slate-400">Total Activities</div>
+                <div className="font-display text-3xl sm:text-4xl text-[#050a1a] dark:text-white mt-1">{telemetry ? telemetry.activities?.length : 0}</div>
+                <div className="font-mono text-[8px] text-[#2455FF] mt-0.5">Registered audit traces</div>
               </div>
             </div>
 
@@ -512,15 +523,21 @@ const AccountHub = () => {
                     Activity Logs
                   </div>
                   <div className="space-y-2.5">
-                    {RECENT_ACTIVITIES.map((act) => (
-                      <div key={act.id} className="flex items-start gap-2.5 text-[11px] leading-normal">
-                        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#2455FF] mt-1.5 shrink-0" />
-                        <div className="flex-1 flex justify-between gap-2">
-                          <span className="text-[#050a1a] dark:text-white font-medium">{act.action}</span>
-                          <span className="font-mono text-[8.5px] text-slate-400 shrink-0">{act.time}</span>
+                    {telemetry && telemetry.activities?.length > 0 ? (
+                      telemetry.activities.map((act) => (
+                        <div key={act.id} className="flex items-start gap-2.5 text-[11px] leading-normal">
+                          <span className="inline-flex h-1.5 w-1.5 rounded-full bg-[#2455FF] mt-1.5 shrink-0" />
+                          <div className="flex-1 flex justify-between gap-2">
+                            <span className="text-[#050a1a] dark:text-white font-medium">{act.action}</span>
+                            <span className="font-mono text-[8.5px] text-slate-400 shrink-0">
+                              {new Date(act.time).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    ) : (
+                      <span className="text-slate-400 font-mono text-[10px]">No recent audit logs available.</span>
+                    )}
                   </div>
                 </div>
 

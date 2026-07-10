@@ -145,6 +145,11 @@ class Document(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class DocumentPatch(BaseModel):
+    body_markdown: str
+    title: Optional[str] = None
+
+
 class BookingIn(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     email: str = Field(min_length=5, max_length=200)
@@ -776,6 +781,62 @@ async def send_prd(session_id: str, payload: SendPRDIn):
         }},
     )
     return document
+
+
+@api_router.patch("/documents/{doc_id}")
+async def patch_document(doc_id: str, payload: DocumentPatch):
+    doc = await db.documents.find_one({"id": doc_id})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    update_data = {
+        "body_markdown": payload.body_markdown,
+        "updated_at": _now_iso()
+    }
+    if payload.title:
+        update_data["title"] = payload.title
+        
+    await db.documents.update_one({"id": doc_id}, {"$set": update_data})
+    
+    # Also update in intake_sessions pending_prd if linked
+    sess = await db.intake_sessions.find_one({"prd_doc_id": doc_id})
+    if sess:
+        await db.intake_sessions.update_one(
+            {"id": sess["id"]},
+            {"$set": {
+                "pending_prd.prd_markdown": payload.body_markdown,
+                "updated_at": _now_iso()
+            }}
+        )
+        
+    return {"ok": True}
+
+
+@api_router.get("/client-telemetry/{user_id}")
+async def get_client_telemetry(user_id: str):
+    lead = await db.leads.find_one({"id": user_id}, {"_id": 0})
+    projects_count = await db.projects.count_documents({"clientId": user_id, "status": {"$ne": "CLOSED"}})
+    sessions_count = await db.intake_sessions.count_documents({"user_id": user_id})
+    prds_count = await db.documents.count_documents({"user_id": user_id, "type": "PRD"})
+    
+    activities = await db.activity_logs.find({"userId": user_id}, {"_id": 0}).sort("createdAt", -1).to_list(10)
+    
+    mapped_activities = []
+    for act in activities:
+        mapped_activities.append({
+            "id": act.get("id"),
+            "action": (act.get("action", "") or "Activity Logged").replace("_", " ").title(),
+            "time": act.get("createdAt", _now_iso()),
+            "type": (act.get("entityType", "general") or "general").lower()
+        })
+        
+    return {
+        "projects_count": projects_count,
+        "sessions_count": sessions_count,
+        "prds_count": prds_count,
+        "activities": mapped_activities,
+        "lead": lead
+    }
 
 
 # ============================================================
