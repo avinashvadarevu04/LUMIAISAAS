@@ -13,6 +13,8 @@ import {
   MessageSquare,
   Send,
   X,
+  Calendar,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -90,6 +92,7 @@ export const Admin = () => {
   const [loginLoading, setLoginLoading] = useState(false);
   const [stats, setStats] = useState(null);
   const [prds, setPrds] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [viewerPrd, setViewerPrd] = useState(null);
 
@@ -107,7 +110,7 @@ export const Admin = () => {
       sessionStorage.setItem(STORE_KEY, password);
       setPwd(password);
       setAuthed(true);
-      await Promise.all([loadStats(password), loadPrds(password)]);
+      await Promise.all([loadStats(password), loadPrds(password), loadBookings(password)]);
     } catch (e) {
       if (!silent) toast.error("Wrong password.");
       sessionStorage.removeItem(STORE_KEY);
@@ -133,6 +136,15 @@ export const Admin = () => {
     }
   };
 
+  const loadBookings = async (password = pwd) => {
+    try {
+      const res = await axios.get(`${API}/admin/bookings`, { params: { password } });
+      setBookings(res.data || []);
+    } catch {
+      /* */
+    }
+  };
+
   const onLogin = async (e) => {
     e?.preventDefault?.();
     if (!pwdInput.trim()) return;
@@ -143,7 +155,7 @@ export const Admin = () => {
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadStats(), loadPrds()]);
+    await Promise.all([loadStats(), loadPrds(), loadBookings()]);
     setRefreshing(false);
   };
 
@@ -243,11 +255,13 @@ export const Admin = () => {
       </header>
 
       <div className="px-5 sm:px-8 py-6 bp-grid bp-wash min-h-[calc(100vh-49px)]">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3" data-testid="admin-stats">
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-3" data-testid="admin-stats">
           <StatCard icon={Users} label="Leads" value={stats?.leads ?? "—"} />
           <StatCard icon={MessageSquare} label="Chat Sessions" value={stats?.sessions ?? "—"} />
           <StatCard icon={FileText} label="PRDs Ready" value={stats?.prds_ready ?? "—"} color="#FFA600" />
           <StatCard icon={Send} label="PRDs Sent" value={stats?.prds_sent ?? "—"} color="#25D366" />
+          <StatCard icon={Calendar} label="Discovery Calls" value={stats?.bookings ?? "—"} color="#00E5FF" />
+          <StatCard icon={Mail} label="Newsletter List" value={stats?.subscribers ?? "—"} color="#9B5DE5" />
         </div>
 
         <div className="mt-6 glass rounded-2xl p-4 ring-1 ring-[#2455FF]/15">
@@ -305,7 +319,63 @@ export const Admin = () => {
           </div>
         </div>
 
-        <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.22em] text-[#050a1a]/40">
+        {/* Bookings Block */}
+        <div className="mt-6 glass rounded-2xl p-4 ring-1 ring-[#2455FF]/15">
+          <div className="flex items-center justify-between">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#2455FF]">
+              All Discovery Calls ({bookings.length})
+            </div>
+          </div>
+
+          <div className="mt-3 overflow-x-auto" data-testid="admin-bookings-table-wrap">
+            <table className="w-full text-left border-collapse text-slate-700">
+              <thead>
+                <tr className="font-mono text-[10px] uppercase tracking-[0.22em] text-[#050a1a]/55 border-b border-[#2455FF]/10">
+                  <th className="py-2 pr-3">Client</th>
+                  <th className="py-2 pr-3">Email / Phone</th>
+                  <th className="py-2 pr-3">Topic</th>
+                  <th className="py-2 pr-3">Expert</th>
+                  <th className="py-2 pr-3">Platform</th>
+                  <th className="py-2 pr-3">Time Slot</th>
+                  <th className="py-2 pr-3">When Booked</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-6 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-[#050a1a]/45">
+                      No discovery calls booked yet.
+                    </td>
+                  </tr>
+                )}
+                {bookings.map((b) => (
+                  <tr key={b.id} className="border-t border-[#2455FF]/10 hover:bg-[#2455FF]/4">
+                    <td className="py-2.5 pr-3 text-[13px] text-[#050a1a] font-medium">
+                      <div>{b.name}</div>
+                      <div className="text-[11px] text-slate-400 font-normal">{b.company || "—"}</div>
+                    </td>
+                    <td className="py-2.5 pr-3 text-[12px] font-mono text-[#050a1a]/70">
+                      <div>{b.email}</div>
+                      <div>{b.phone}</div>
+                    </td>
+                    <td className="py-2.5 pr-3 text-[13px] text-[#050a1a]/75 max-w-[200px] truncate">{b.discussionTopic}</td>
+                    <td className="py-2.5 pr-3 text-[13px] text-[#050a1a]/75">{b.preferredExpert}</td>
+                    <td className="py-2.5 pr-3 text-[12px] font-mono uppercase tracking-wider text-[#2455FF]">{b.meetingPlatform}</td>
+                    <td className="py-2.5 pr-3 text-[12px] text-slate-700">
+                      <div className="font-semibold">{b.date}</div>
+                      <div className="text-[11px] text-slate-400">{b.timeSlot} ({b.timezone})</div>
+                    </td>
+                    <td className="py-2.5 pr-3 text-[11px] font-mono text-[#050a1a]/55">
+                      {b.created_at ? new Date(b.created_at).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center font-mono text-[10px] uppercase tracking-[0.22em] text-[#050a1a]/40">
           LUPUS&nbsp;AI&nbsp;LABS · Admin · {new Date().getFullYear()}
         </p>
       </div>

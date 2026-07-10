@@ -22,6 +22,9 @@ import {
 import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { useUser } from "@/lib/userStore";
+import axios from "axios";
+
+const API = `${process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"}/api`;
 
 const DISCUSSION_TOPICS = [
   "AI Chatbot",
@@ -195,10 +198,15 @@ export const ScheduleMeetingPage = () => {
     setStep(step - 1);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
-    toast.success("Meeting Request Submitted Successfully!");
+    try {
+      await axios.post(`${API}/bookings`, formData);
+      setSubmitted(true);
+      toast.success("Meeting Request Submitted Successfully!");
+    } catch (err) {
+      toast.error("Failed to book meeting. Please check your connection and try again.");
+    }
   };
 
   const logout = () => {

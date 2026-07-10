@@ -143,6 +143,48 @@ class Document(BaseModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class BookingIn(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    email: str = Field(min_length=5, max_length=200)
+    phone: str = Field(min_length=5, max_length=25)
+    company: Optional[str] = ""
+    discussionTopic: str = Field(min_length=2, max_length=100)
+    preferredExpert: str = Field(min_length=2, max_length=100)
+    meetingPlatform: str = Field(min_length=2, max_length=50)
+    date: str = Field(min_length=8, max_length=20)
+    timeSlot: str = Field(min_length=3, max_length=30)
+    timezone: str = Field(default="UTC")
+    description: Optional[str] = ""
+
+
+class Booking(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    phone: str
+    company: str
+    discussionTopic: str
+    preferredExpert: str
+    meetingPlatform: str
+    date: str
+    timeSlot: str
+    timezone: str
+    description: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class SubscriberIn(BaseModel):
+    email: str = Field(min_length=5, max_length=200)
+
+
+class Subscriber(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    subscribed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 # ============================================================
 # Helpers
 # ============================================================
@@ -866,12 +908,217 @@ async def admin_stats(password: str):
     sessions_count = await db.intake_sessions.count_documents({})
     sent_prds = await db.documents.count_documents({"type": "PRD", "status": "sent"})
     ready_sessions = await db.intake_sessions.count_documents({"status": "ready"})
+    bookings_count = await db.bookings.count_documents({})
+    subscribers_count = await db.subscribers.count_documents({})
     return {
         "leads": leads_count,
         "sessions": sessions_count,
         "prds_sent": sent_prds,
         "prds_ready": ready_sessions,
+        "bookings": bookings_count,
+        "subscribers": subscribers_count,
     }
+
+
+def generate_ics(booking: dict) -> str:
+    dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    clean_date = booking["date"].replace("-", "")
+    try:
+        time_part = booking["timeSlot"].split("-")[0].strip()
+        time_obj = datetime.strptime(time_part, "%I:%M %p")
+        start_hour = time_obj.strftime("%H")
+        start_min = time_obj.strftime("%M")
+    except Exception:
+        start_hour = "10"
+        start_min = "00"
+    
+    try:
+        end_time_part = booking["timeSlot"].split("-")[1].strip()
+        end_time_obj = datetime.strptime(end_time_part, "%I:%M %p")
+        end_hour = end_time_obj.strftime("%H")
+        end_min = end_time_obj.strftime("%M")
+    except Exception:
+        end_hour = "10"
+        end_min = "30"
+
+    start_time_str = f"{clean_date}T{start_hour}{start_min}00Z"
+    end_time_str = f"{clean_date}T{end_hour}{end_min}00Z"
+    
+    return (
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "PRODID:-//LUMI AI//Discovery Meeting//EN\n"
+        "BEGIN:VEVENT\n"
+        f"UID:{booking['id']}\n"
+        f"DTSTAMP:{dtstamp}\n"
+        f"DTSTART:{start_time_str}\n"
+        f"DTEND:{end_time_str}\n"
+        f"SUMMARY:LUMI AI Discovery Call · {booking['name']}\n"
+        f"DESCRIPTION:Discovery call with AI experts.\\nDiscussion Topic: {booking['discussionTopic']}\\nExpert: {booking['preferredExpert']}\\nNotes: {booking['description']}\n"
+        f"LOCATION:{booking['meetingPlatform']}\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR"
+    )
+
+
+async def _send_newsletter_email(email: str) -> Dict[str, Any]:
+    if not (RESEND_API_KEY and LUPUS_ADMIN_EMAIL):
+        return {"sent": False, "reason": "RESEND_API_KEY or LUPUS_ADMIN_EMAIL not configured."}
+    
+    subject = "[LUMI AI] Welcome to Lupus AI Lab updates"
+    html = (
+        '<div style="background:#f5f7ff;padding:24px 12px;font-family:Arial,sans-serif;">'
+        '<div style="max-width:600px;margin:0 auto;background:#fff;padding:28px;border:1px solid #2455FF22;border-radius:14px;">'
+        '<h2 style="color:#2455FF;margin-top:0;">Welcome to the LUMI AI Lab network</h2>'
+        '<p style="font-size:14px;color:#050a1ad9;line-height:1.6;">'
+        'Thank you for subscribing to updates from Lupus AI Labs! You are now on the list to receive our latest insights, product launches, research notes, and updates on intelligent software and custom SaaS platforms.'
+        '</p>'
+        '<hr style="border:0;border-top:1px solid #2455FF22;margin:20px 0;"/>'
+        '<p style="font-size:11px;color:#050a1a99;margin-bottom:0;">'
+        'LUPUS AI LABS · Hyderabad, India · hello@lumi.ai'
+        '</p>'
+        '</div></div>'
+    )
+    
+    params = {
+        "from": SENDER_EMAIL,
+        "to": [email],
+        "subject": subject,
+        "html": html,
+    }
+    try:
+        email_res = await asyncio.to_thread(resend.Emails.send, params)
+        return {"sent": True, "id": email_res.get("id")}
+    except Exception as e:
+        logger.exception("Resend newsletter send failed")
+        return {"sent": False, "reason": str(e)}
+
+
+async def _send_booking_emails(booking: dict) -> Dict[str, Any]:
+    if not (RESEND_API_KEY and LUPUS_ADMIN_EMAIL):
+        return {"sent": False, "reason": "RESEND_API_KEY or LUPUS_ADMIN_EMAIL not configured."}
+    
+    ics_content = generate_ics(booking)
+    ics_bytes = ics_content.encode("utf-8")
+    
+    attachments = [
+        {
+            "filename": "lumi-meeting.ics",
+            "content": list(ics_bytes),
+        }
+    ]
+    
+    subject_client = f"[LUMI AI] Discovery Call Scheduled: {booking['discussionTopic']}"
+    html_client = (
+        '<div style="background:#f5f7ff;padding:24px 12px;font-family:Arial,sans-serif;">'
+        '<div style="max-width:600px;margin:0 auto;background:#fff;padding:28px;border:1px solid #2455FF22;border-radius:14px;">'
+        '<h2 style="color:#2455FF;margin-top:0;">Discovery Call Scheduled!</h2>'
+        f'<p style="font-size:14px;color:#050a1ad9;">Hi <strong>{booking["name"]}</strong>,</p>'
+        '<p style="font-size:14px;color:#050a1ad9;line-height:1.6;">'
+        'Your discovery call with our AI experts is confirmed. An event (.ics) file is attached to this email so you can add it to your calendar.'
+        '</p>'
+        '<div style="background:rgba(36,85,255,0.05);border-left:3px solid #2455FF;padding:12px;margin:20px 0;border-radius:0 8px 8px 0;">'
+        f'<p style="margin:4px 0;font-size:13.5px;"><strong>Topic:</strong> {booking["discussionTopic"]}</p>'
+        f'<p style="margin:4px 0;font-size:13.5px;"><strong>Expert:</strong> {booking["preferredExpert"]}</p>'
+        f'<p style="margin:4px 0;font-size:13.5px;"><strong>Platform:</strong> {booking["meetingPlatform"]}</p>'
+        f'<p style="margin:4px 0;font-size:13.5px;"><strong>Date:</strong> {booking["date"]}</p>'
+        f'<p style="margin:4px 0;font-size:13.5px;"><strong>Time Slot:</strong> {booking["timeSlot"]} ({booking["timezone"]})</p>'
+        '</div>'
+        '<p style="font-size:14px;color:#050a1ad9;line-height:1.6;">'
+        'We look forward to speaking with you and exploring your idea.'
+        '</p>'
+        '<hr style="border:0;border-top:1px solid #2455FF22;margin:20px 0;"/>'
+        '<p style="font-size:11px;color:#050a1a99;margin-bottom:0;">'
+        'LUPUS AI LABS · Hyderabad, India · hello@lumi.ai'
+        '</p>'
+        '</div></div>'
+    )
+
+    params_client = {
+        "from": SENDER_EMAIL,
+        "to": [booking["email"]],
+        "subject": subject_client,
+        "html": html_client,
+        "attachments": attachments,
+    }
+
+    subject_admin = f"[LUMI Booking] New Discovery Call booked by {booking['name']}"
+    html_admin = (
+        '<div style="background:#f5f7ff;padding:24px 12px;font-family:Arial,sans-serif;">'
+        '<div style="max-width:600px;margin:0 auto;background:#fff;padding:28px;border:1px solid #2455FF22;border-radius:14px;">'
+        '<h2 style="color:#050a1a;margin-top:0;">New Discovery Call Booked</h2>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Client Name:</strong> {booking["name"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Email:</strong> {booking["email"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Phone:</strong> {booking["phone"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Company:</strong> {booking["company"] or "—"}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Topic:</strong> {booking["discussionTopic"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Expert:</strong> {booking["preferredExpert"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Platform:</strong> {booking["meetingPlatform"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Date:</strong> {booking["date"]}</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Time Slot:</strong> {booking["timeSlot"]} ({booking["timezone"]})</p>'
+        f'<p style="font-size:14px;color:#050a1ad9;margin:6px 0;"><strong>Description:</strong> {booking["description"] or "—"}</p>'
+        '</div></div>'
+    )
+    
+    params_admin = {
+        "from": SENDER_EMAIL,
+        "to": [LUPUS_ADMIN_EMAIL],
+        "subject": subject_admin,
+        "html": html_admin,
+        "attachments": attachments,
+    }
+    
+    try:
+        res1, res2 = await asyncio.gather(
+            asyncio.to_thread(resend.Emails.send, params_client),
+            asyncio.to_thread(resend.Emails.send, params_admin)
+        )
+        return {"sent": True, "client_id": res1.get("id"), "admin_id": res2.get("id")}
+    except Exception as e:
+        logger.exception("Resend booking email delivery failed")
+        return {"sent": False, "reason": str(e)}
+
+
+@api_router.post("/newsletter/subscribe")
+async def subscribe_newsletter(payload: SubscriberIn):
+    email_clean = payload.email.strip().lower()
+    existing = await db.subscribers.find_one({"email": email_clean})
+    if existing:
+        return {"message": "Already subscribed."}
+    
+    sub = Subscriber(email=email_clean)
+    doc = sub.model_dump()
+    doc["subscribed_at"] = doc["subscribed_at"].isoformat()
+    await db.subscribers.insert_one(doc)
+    
+    # Send confirmation email via Resend
+    await _send_newsletter_email(email_clean)
+    return {"message": "Subscribed successfully."}
+
+
+@api_router.post("/bookings", response_model=Booking)
+async def create_booking(payload: BookingIn):
+    booking_obj = Booking(**payload.model_dump())
+    doc = booking_obj.model_dump()
+    doc["created_at"] = doc["created_at"].isoformat()
+    await db.bookings.insert_one(doc)
+    
+    # Send emails
+    await _send_booking_emails(doc)
+    return booking_obj
+
+
+@api_router.get("/admin/bookings")
+async def admin_list_bookings(password: str, limit: int = 500):
+    _require_admin(password)
+    rows = await db.bookings.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    for r in rows:
+        if isinstance(r.get("created_at"), str):
+            try:
+                r["created_at"] = datetime.fromisoformat(r["created_at"])
+            except Exception:
+                pass
+    return rows
 
 
 # ============================================================

@@ -14,7 +14,11 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import axios from "axios";
+import { toast } from "sonner";
 import { SHOW_AI_INFRA } from "../config";
+
+const API = `${process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"}/api`;
 
 const QUICK_LINKS = [
   { label: "Home", href: "/" },
@@ -52,11 +56,17 @@ export const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
 
-  const handleSubscribe = (e) => {
+  const handleSubscribe = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
-    setSubscribed(true);
-    setEmail("");
+    try {
+      await axios.post(`${API}/newsletter/subscribe`, { email: email.trim() });
+      setSubscribed(true);
+      setEmail("");
+      toast.success("Subscribed successfully!");
+    } catch (err) {
+      toast.error("Failed to subscribe. Please try again.");
+    }
   };
 
   const handleLinkClick = (e, href) => {
