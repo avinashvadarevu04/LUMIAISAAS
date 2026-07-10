@@ -124,8 +124,8 @@ export const Footer = () => {
       {/* Oversized background watermark */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center z-0">
         <motion.div
-          initial={{ opacity: 0.13 }}
-          animate={{ opacity: [0.13, 0.18, 0.13] }}
+          initial={{ opacity: 0.22 }}
+          animate={{ opacity: [0.22, 0.28, 0.22] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
           className="font-display text-[12vw] leading-none bg-gradient-to-b from-[#2455FF] via-[#2455FF] to-transparent bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_24px_rgba(36,85,255,0.06)] filter blur-[0.4px] inline-block"
         >
