@@ -28,6 +28,7 @@ import Navbar from "./Navbar";
 import WhatsAppLoginModal from "./WhatsAppLoginModal";
 import { playWelcomeChime } from "@/lib/sfx";
 import { useUser } from "@/lib/userStore";
+import Footer from "./Footer";
 
 const SERVICES_DATA = [
   {
@@ -1109,6 +1110,7 @@ export default function AIInfraPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      <Footer />
     </div>
   );
 }

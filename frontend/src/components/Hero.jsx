@@ -18,6 +18,7 @@ import WhatsAppLoginModal from "./WhatsAppLoginModal";
 import AnimatedPhone from "./AnimatedPhone";
 import { playWelcomeChime } from "@/lib/sfx";
 import { useUser } from "@/lib/userStore";
+import Footer from "./Footer";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -640,15 +641,8 @@ export const Hero = () => {
           </motion.div>
         </motion.div>
 
-        {/* Bottom strip — lab readouts (above the landmark) */}
-        <div className="absolute bottom-3 inset-x-0 z-10 pointer-events-none">
-          <div className="max-w-[1240px] mx-auto px-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.28em] text-[#2455FF]/60">
-            <span>LUMI · LAB-01</span>
-            <span className="hidden md:inline">Hyderabad · 17.3850° N, 78.4867° E</span>
-            <span>STATUS: SYNTHESIZING</span>
-          </div>
-        </div>
       </section>
+      <Footer />
     </div>
   );
 };

@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { useUser } from "@/lib/userStore";
+import Footer from "./Footer";
 
 const DISCUSSION_TOPICS = [
   "AI Chatbot",
@@ -862,13 +863,7 @@ export const ScheduleMeetingPage = () => {
         </AnimatePresence>
       </main>
 
-      {/* Lab Strip Readout Footer */}
-      <footer className="w-full mt-auto py-4 relative z-10 pointer-events-none">
-        <div className="max-w-4xl mx-auto px-6 flex items-center justify-between font-mono text-[9px] uppercase tracking-[0.24em] text-[#2455FF]/65">
-          <span>LUMI · MEET</span>
-          <span>SECURE END-TO-END</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
