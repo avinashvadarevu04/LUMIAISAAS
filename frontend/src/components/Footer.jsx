@@ -124,14 +124,10 @@ export const Footer = () => {
       {/* Oversized background watermark */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center z-0">
         <motion.div
-          initial={{ opacity: 0.32 }}
-          animate={{ opacity: [0.32, 0.45, 0.32] }}
+          initial={{ opacity: 0.13 }}
+          animate={{ opacity: [0.13, 0.18, 0.13] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            maskImage: "radial-gradient(circle, black 65%, transparent 95%)",
-            WebkitMaskImage: "radial-gradient(circle, black 65%, transparent 95%)"
-          }}
-          className="font-display text-[12vw] leading-none text-[#2455FF] font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_24px_rgba(36,85,255,0.06)] filter blur-[0.4px] inline-block"
+          className="font-display text-[12vw] leading-none bg-gradient-to-b from-[#2455FF] via-[#2455FF] to-transparent bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_24px_rgba(36,85,255,0.06)] filter blur-[0.4px] inline-block"
         >
           LUMI AI
         </motion.div>
