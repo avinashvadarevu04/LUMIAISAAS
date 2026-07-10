@@ -93,6 +93,7 @@ export default function ManagementDashboard({ isAdminOnly = false }) {
         { id: "sowViewer", label: "SOW Viewer", icon: FileText },
         { id: "adminCommunications", label: "Admin Communication", icon: MessageSquare },
         { id: "changeRequests", label: "Change Requests", icon: ClipboardCheck },
+        { id: "tasks", label: "Task Board", icon: ClipboardCheck },
         { id: "finance", label: "Billing", icon: BadgeIndianRupee },
         { id: "documents", label: "Documents", icon: FileUp },
         { id: "activity", label: "Activity", icon: Activity },

@@ -108,6 +108,7 @@ class PersonIn(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     company: str = Field(default="", max_length=150)
     capacity_hours: int = Field(default=40, ge=1, le=168)
+    skills: List[str] = Field(default_factory=list)
 
     @field_validator("email")
     @classmethod
@@ -275,7 +276,7 @@ def create_management_router(db, admin_password: str, admin_email: str) -> APIRo
         return AsyncIOMotorGridFSBucket(db, bucket_name="management_files")
 
     def public_user(user: dict) -> dict:
-        return {k: user.get(k) for k in ("id", "name", "email", "role", "company", "status", "capacity_hours", "createdAt", "updatedAt")}
+        return {k: user.get(k) for k in ("id", "name", "email", "role", "company", "status", "capacity_hours", "skills", "createdAt", "updatedAt")}
 
     def token_for(user: dict) -> str:
         payload = {
@@ -1087,7 +1088,7 @@ Expires:
         person = {"id": person_id, "name": payload.name.strip(), "email": payload.email,
             "passwordHash": bcrypt.hashpw(payload.password.encode(), bcrypt.gensalt()).decode(),
             "role": role.value, "company": payload.company.strip(), "status": "ACTIVE",
-            "capacity_hours": payload.capacity_hours, "createdAt": stamp, "updatedAt": stamp}
+            "capacity_hours": payload.capacity_hours, "skills": payload.skills, "createdAt": stamp, "updatedAt": stamp}
         await db.users.insert_one(person.copy())
         profile_collection = db.clients if role == Role.CLIENT else db.developers
         await profile_collection.insert_one({"id": uid(), "userId": person_id, "createdAt": stamp, "updatedAt": stamp})

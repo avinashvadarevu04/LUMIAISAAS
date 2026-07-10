@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import axios from "axios";
@@ -28,6 +28,87 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
 
   const [sows, setSows] = useState([]);
   const [selectedSow, setSelectedSow] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [activeProjectForTasks, setActiveProjectForTasks] = useState("");
+  const [loadingTasks, setLoadingTasks] = useState(false);
+
+  const canvasRef = useRef(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  const startDrawing = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#2455FF";
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+    const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+    
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    setIsDrawing(true);
+  };
+
+  const draw = (e) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || (e.touches && e.touches[0].clientX)) - rect.left;
+    const y = (e.clientY || (e.touches && e.touches[0].clientY)) - rect.top;
+    
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clearCanvas = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  const handleSignSow = async (sowId, projectId) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const blank = document.createElement("canvas");
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    if (canvas.toDataURL() === blank.toDataURL()) {
+      toast.error("Please draw your signature first.");
+      return;
+    }
+    
+    const signatureBase64 = canvas.toDataURL("image/png");
+    try {
+      toast.loading("Signing SOW and launching project workspace...");
+      const newMeta = { ...(selectedSow?.meta || {}), signature: signatureBase64, signed: true, signed_at: new Date().toISOString() };
+      await api.patch(`/documents/${sowId}`, {
+        meta: newMeta,
+        status: "approved"
+      });
+      await api.patch(`/projects/${projectId}`, {
+        status: "ACTIVE"
+      });
+      toast.dismiss();
+      toast.success("Statement of Work signed! Project workspace is now active.");
+      setSelectedSow(null);
+      loadData();
+    } catch (err) {
+      toast.dismiss();
+      toast.error(apiError(err));
+    }
+  };
 
   const [adminUser, setAdminUser] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -130,6 +211,30 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
         .catch(() => {});
     }
   }, [activeTab, user.id]);
+
+  useEffect(() => {
+    if (activeTab === "tasks") {
+      if (data.projects.length > 0) {
+        const projectId = activeProjectForTasks || data.projects[0].id;
+        if (!activeProjectForTasks) {
+          setActiveProjectForTasks(projectId);
+        }
+        loadProjectTasks(projectId);
+      }
+    }
+  }, [activeTab, activeProjectForTasks, data.projects]);
+
+  const loadProjectTasks = async (projectId) => {
+    setLoadingTasks(true);
+    try {
+      const res = await api.get(`/projects/${projectId}/tasks`);
+      setTasks(res.data || []);
+    } catch (err) {
+      toast.error(apiError(err));
+    } finally {
+      setLoadingTasks(false);
+    }
+  };
 
   const handleClientDecision = async (milestoneId, action) => {
     try {
@@ -555,6 +660,58 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
                       return <p key={idx} className="mb-1">{line}</p>;
                     })}
                   </div>
+
+                  {!selectedSow.meta?.signed ? (
+                    <div className="border-t border-[#2455FF]/10 pt-4 space-y-3 shrink-0">
+                      <span className="block font-mono text-[10px] uppercase tracking-wider text-[#2455FF] font-semibold">
+                        Signature Authorization Pad
+                      </span>
+                      
+                      <div className="bg-slate-50 border border-dashed border-[#2455FF]/20 rounded-xl p-4 flex flex-col items-center space-y-3">
+                        <canvas
+                          ref={canvasRef}
+                          width={400}
+                          height={120}
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={startDrawing}
+                          onTouchMove={draw}
+                          onTouchEnd={stopDrawing}
+                          className="bg-white border rounded-lg cursor-crosshair shadow-inner"
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={clearCanvas}
+                            className="rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 text-xs font-semibold transition"
+                          >
+                            Clear Signature
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSignSow(selectedSow.id, selectedSow.project_id)}
+                            className="rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white px-4 py-1.5 text-xs font-semibold shadow transition"
+                          >
+                            Sign & Activate Workspace
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border-t border-[#2455FF]/10 pt-4 text-xs font-mono text-emerald-700 flex flex-col items-center space-y-2 shrink-0">
+                      <span className="font-bold">✓ Contract Legally Signed & Verified</span>
+                      {selectedSow.meta?.signature && (
+                        <img
+                          src={selectedSow.meta.signature}
+                          alt="Client Signature"
+                          className="max-h-16 bg-white border p-1 rounded mt-1 shadow-sm"
+                        />
+                      )}
+                      <span className="text-[10px] text-slate-400">Signed At: {new Date(selectedSow.meta.signed_at).toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </div>
@@ -1042,6 +1199,189 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
           <FormField label="Authorized Email" defaultValue={user.email} disabled />
           <FormField label="Company Organisation" defaultValue={user.company} disabled />
         </GlassCard>
+      </div>
+    );
+  }
+
+  // 8. Visual Kanban Task Board
+  if (activeTab === "tasks") {
+    const columns = [
+      { id: "TODO", label: "To Do" },
+      { id: "IN_PROGRESS", label: "In Progress" },
+      { id: "REVIEW", label: "Under Review" },
+      { id: "DONE", label: "Completed" }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <SectionTitle title="Project Task Board" subtitle="Read-only tracker of developers' tasks, active cards, and sprint boards" />
+          
+          <FormSelect
+            value={activeProjectForTasks}
+            onChange={(e) => setActiveProjectForTasks(e.target.value)}
+            className="text-xs max-w-sm"
+          >
+            {data.projects.map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </FormSelect>
+        </div>
+
+        {loadingTasks ? (
+          <div className="flex justify-center py-12 text-[#2455FF] font-mono text-xs uppercase tracking-wider animate-pulse">
+            <Loader2 className="animate-spin mr-2 h-4 w-4" /> Syncing task cards...
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-start">
+            {columns.map((col) => {
+              const colTasks = tasks.filter(t => t.status === col.id);
+              return (
+                <GlassCard key={col.id} hoverLift={false} className="p-4 flex flex-col space-y-3 min-h-[350px]">
+                  <div className="flex justify-between items-center border-b border-[#2455ff]/10 pb-2">
+                    <span className="font-mono text-xs uppercase tracking-wider font-semibold text-slate-500">{col.label}</span>
+                    <span className="font-mono text-[10px] text-slate-400">{colTasks.length}</span>
+                  </div>
+
+                  <div className="space-y-3 overflow-y-auto flex-1 max-h-[350px] pr-1">
+                    {colTasks.map((t) => (
+                      <div key={t.id} className="rounded-xl border border-[#2455FF]/10 bg-white p-3.5 flex flex-col space-y-2 shadow-sm">
+                        <div className="text-xs font-semibold text-[#050a1a]">{t.title}</div>
+                        <div className="flex justify-between items-center pt-2">
+                          <span className="font-mono text-[8.5px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-100 text-slate-550">
+                            {t.status === "DONE" ? "Completed" : t.status === "REVIEW" ? "Review" : "Active"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {colTasks.length === 0 && (
+                      <div className="text-center py-12 text-[10.5px] font-mono text-slate-350 tracking-wider">
+                        No tasks
+                      </div>
+                    )}
+                  </div>
+                </GlassCard>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 9. Billing Ledger History
+  if (activeTab === "finance") {
+    const invoices = data.finance?.invoices || [];
+    const payments = data.finance?.payments || [];
+    const contracts = data.finance?.contracts || [];
+
+    return (
+      <div className="space-y-6">
+        <SectionTitle title="Billing & Invoicing Ledger" subtitle="Pay pending invoices via Stripe and download transaction receipts" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* SOW Contracts */}
+          <div className="lg:col-span-1 space-y-4">
+            <h3 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#2455FF] font-bold">Active SOW Values</h3>
+            <div className="space-y-3">
+              {contracts.map((c) => (
+                <GlassCard key={c.id} hoverLift={false} className="p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-[#050a1a]">{money(c.amount)}</span>
+                    <GlowBadge status={c.status} />
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">Reference: {c.reference || "None"}</div>
+                </GlassCard>
+              ))}
+              {contracts.length === 0 && <EmptyState text="No active contracts." />}
+            </div>
+          </div>
+
+          {/* Invoices Ledger */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#2455FF] font-bold">Invoices & Receipts ({invoices.length})</h3>
+            <div className="space-y-3">
+              {invoices.map((inv) => (
+                <GlassCard key={inv.id} hoverLift={false} className="p-4 flex flex-wrap justify-between items-center gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold text-[#050a1a]">{money(inv.amount)} {inv.currency}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">Invoice ID: {inv.id} · Ref: {inv.reference || "—"}</div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <GlowBadge status={inv.status} />
+                    <button
+                      onClick={() => {
+                        const receiptWindow = window.open("", "_blank");
+                        receiptWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Receipt - ${inv.id}</title>
+                              <style>
+                                body { font-family: monospace; padding: 40px; color: #050a1a; line-height: 1.5; }
+                                .header { border-bottom: 2px solid #2455FF; padding-bottom: 20px; margin-bottom: 30px; }
+                                .title { font-size: 24px; font-weight: bold; color: #2455FF; }
+                                .meta { display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 12px; }
+                                .details { border-collapse: collapse; width: 100%; margin-bottom: 50px; }
+                                .details th, .details td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                .details th { background-color: #f5f7ff; }
+                                .footer { text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <div class="title">LUPUS AI LABS RECEIPT</div>
+                                <p>Hyderabad, India · hello@lumi.ai</p>
+                              </div>
+                              <div class="meta">
+                                <div>
+                                  <strong>Bill To:</strong><br/>
+                                  Client Organisation<br/>
+                                  ${user.name}<br/>
+                                  ${user.email}
+                                </div>
+                                <div style="text-align: right;">
+                                  <strong>Invoice:</strong> ${inv.id}<br/>
+                                  <strong>Reference:</strong> ${inv.reference || "None"}<br/>
+                                  <strong>Status:</strong> ${inv.status}<br/>
+                                  <strong>Date:</strong> ${new Date(inv.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <table class="details">
+                                <thead>
+                                  <tr>
+                                    <th>Description</th>
+                                    <th style="text-align: right;">Total Cost</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td>Milestone Delivery Services - Software Engineering</td>
+                                    <td style="text-align: right;">${money(inv.amount)} ${inv.currency}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <div class="footer">
+                                Thank you for partnering with Lupus AI Labs!
+                              </div>
+                              <script>window.print();</script>
+                            </body>
+                          </html>
+                        `);
+                        receiptWindow.document.close();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#2455FF]/15 px-3 py-1.5 text-[11px] font-mono hover:bg-slate-50 transition"
+                    >
+                      <Download size={11} />
+                      <span>Receipt</span>
+                    </button>
+                  </div>
+                </GlassCard>
+              ))}
+              {invoices.length === 0 && <EmptyState text="No invoices billed to your workspace." />}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

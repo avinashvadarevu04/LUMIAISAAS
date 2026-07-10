@@ -5,7 +5,7 @@ import axios from "axios";
 import {
   Users, FolderKanban, ClipboardCheck, CircleDollarSign, Plus, Search,
   Activity, Eye, ChevronRight, FileText, BadgeIndianRupee, LockKeyhole,
-  CheckCircle2, PlusCircle, Settings, X, Calendar, UserPlus, FileUp, HelpCircle
+  CheckCircle2, PlusCircle, Settings, X, Calendar, UserPlus, FileUp, HelpCircle, Download
 } from "lucide-react";
 import { managementApi as api, apiError } from "@/lib/managementApi";
 import {
@@ -1826,6 +1826,147 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
     );
   }
 
+  // 8. Billing Finance Ledger Tab
+  if (activeTab === "finance") {
+    const invoices = data.finance?.invoices || [];
+    const payments = data.finance?.payments || [];
+    const contracts = data.finance?.contracts || [];
+
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <SectionTitle title="Financial & Contracts Ledger" subtitle="Manage Statement of Work values, track milestone invoices, and record client transactions" />
+          
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCreatingFinance("invoice")}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] text-white px-3.5 py-2 font-semibold text-xs transition animate-pulse-subtle"
+            >
+              <PlusCircle size={14} />
+              <span>Create Invoice</span>
+            </button>
+            <button
+              onClick={() => setCreatingFinance("contract")}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#2455FF]/15 bg-white hover:bg-slate-50 text-[#050a1a] px-3.5 py-2 font-semibold text-xs transition"
+            >
+              <PlusCircle size={14} />
+              <span>New Contract</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* SOW Contracts */}
+          <div className="space-y-4">
+            <h3 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#2455FF] font-bold">Statement of Work Contracts</h3>
+            <div className="space-y-3">
+              {contracts.map((c) => (
+                <GlassCard key={c.id} hoverLift={false} className="p-4 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-[#050a1a]">{money(c.amount)}</span>
+                    <GlowBadge status={c.status} />
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">Reference: {c.reference || "None"}</div>
+                  {c.meta?.signed && (
+                    <div className="text-[9.5px] text-emerald-700 font-mono flex flex-col gap-0.5 mt-1 bg-emerald-50 px-2 py-1 rounded">
+                      <span className="font-bold">✓ Signed Contract Authorized</span>
+                      <span className="text-[8.5px] text-slate-400">Date: {new Date(c.meta.signed_at).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                </GlassCard>
+              ))}
+              {contracts.length === 0 && <EmptyState text="No SOW contracts recorded." />}
+            </div>
+          </div>
+
+          {/* Invoices */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#2455FF] font-bold">Invoiced Milestones ({invoices.length})</h3>
+            <div className="space-y-3">
+              {invoices.map((inv) => (
+                <GlassCard key={inv.id} hoverLift={false} className="p-4 flex flex-wrap justify-between items-center gap-3">
+                  <div className="space-y-1">
+                    <div className="text-xs font-semibold text-[#050a1a]">{money(inv.amount)} {inv.currency}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">Invoice ID: {inv.id} · Reference: {inv.reference || "—"}</div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <GlowBadge status={inv.status} />
+                    <button
+                      onClick={() => {
+                        const receiptWindow = window.open("", "_blank");
+                        receiptWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Receipt - ${inv.id}</title>
+                              <style>
+                                body { font-family: monospace; padding: 40px; color: #050a1a; line-height: 1.5; }
+                                .header { border-bottom: 2px solid #2455FF; padding-bottom: 20px; margin-bottom: 30px; }
+                                .title { font-size: 24px; font-weight: bold; color: #2455FF; }
+                                .meta { display: flex; justify-content: space-between; margin-bottom: 40px; font-size: 12px; }
+                                .details { border-collapse: collapse; width: 100%; margin-bottom: 50px; }
+                                .details th, .details td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                                .details th { background-color: #f5f7ff; }
+                                .footer { text-align: center; font-size: 10px; color: #888; border-top: 1px solid #eee; padding-top: 20px; }
+                              </style>
+                            </head>
+                            <body>
+                              <div class="header">
+                                <div class="title">LUPUS AI LABS RECEIPT</div>
+                                <p>Hyderabad, India · hello@lumi.ai</p>
+                              </div>
+                              <div class="meta">
+                                <div>
+                                  <strong>Bill To:</strong><br/>
+                                  Client Organisation<br/>
+                                  Account ID: ${inv.user_id || "N/A"}
+                                </div>
+                                <div style="text-align: right;">
+                                  <strong>Invoice:</strong> ${inv.id}<br/>
+                                  <strong>Reference:</strong> ${inv.reference || "None"}<br/>
+                                  <strong>Status:</strong> ${inv.status}<br/>
+                                  <strong>Date:</strong> ${new Date(inv.createdAt).toLocaleDateString()}
+                                </div>
+                              </div>
+                              <table class="details">
+                                <thead>
+                                  <tr>
+                                    <th>Description</th>
+                                    <th style="text-align: right;">Total Cost</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr>
+                                    <td>Milestone Delivery Services - Software Engineering</td>
+                                    <td style="text-align: right;">${money(inv.amount)} ${inv.currency}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                              <div class="footer">
+                                Thank you for partnering with Lupus AI Labs!
+                              </div>
+                              <script>window.print();</script>
+                            </body>
+                          </html>
+                        `);
+                        receiptWindow.document.close();
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-[#2455FF]/15 px-3 py-1.5 text-[11px] font-mono hover:bg-slate-50 transition"
+                    >
+                      <Download size={11} />
+                      <span>Print Receipt</span>
+                    </button>
+                  </div>
+                </GlassCard>
+              ))}
+              {invoices.length === 0 && <EmptyState text="No milestone invoices logged." />}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
 
@@ -2130,6 +2271,26 @@ function CreateProjectModal({ onClose, onDone, people, prdQueue }) {
     }
   };
 
+  const getDevMatchScore = (dev, prdId) => {
+    if (!prdId) return null;
+    const prd = prdQueue.find(p => p.id === prdId);
+    if (!prd) return null;
+    
+    const prdText = `${prd.title} ${prd.description || ""} ${prd.body_markdown || ""}`.toLowerCase();
+    const devSkills = dev.skills || [];
+    if (devSkills.length === 0) return 0;
+    
+    let matches = 0;
+    devSkills.forEach(skill => {
+      const term = skill.toLowerCase();
+      if (prdText.includes(term)) {
+        matches += 1;
+      }
+    });
+    
+    return Math.round((matches / devSkills.length) * 100);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050a1a]/30 backdrop-blur-sm p-4">
       <motion.div
@@ -2156,26 +2317,32 @@ function CreateProjectModal({ onClose, onDone, people, prdQueue }) {
             ))}
           </FormSelect>
 
-          <label className="block space-y-1">
-            <span className="font-semibold text-xs text-[#050a1a]">Assigned Developers</span>
-            <select
-              multiple
-              value={form.developer_ids}
-              onChange={(e) => setForm({ ...form, developer_ids: [...e.target.selectedOptions].map(o => o.value) })}
-              className="w-full h-24 rounded-xl border bg-white/75 p-2 text-[#050a1a] text-xs outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
-            >
-              {devs.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-          </label>
-
           <FormSelect label="Linked Intake PRD" value={form.prd_id} onChange={(e) => setForm({ ...form, prd_id: e.target.value })}>
             <option value="">No PRD Attachment</option>
             {prdQueue.map(p => (
               <option key={p.id} value={p.id}>{p.title}</option>
             ))}
           </FormSelect>
+
+          <label className="block space-y-1">
+            <span className="font-semibold text-xs text-[#050a1a]">Assigned Developers</span>
+            <select
+              multiple
+              value={form.developer_ids}
+              onChange={(e) => setForm({ ...form, developer_ids: [...e.target.selectedOptions].map(o => o.value) })}
+              className="w-full h-28 rounded-xl border bg-white/75 p-2 text-[#050a1a] text-xs outline-none focus:ring-2 focus:ring-[#2455FF]/30 transition"
+            >
+              {devs.map(d => {
+                const score = getDevMatchScore(d, form.prd_id);
+                return (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {score !== null ? `(${score}% Skills Fit)` : ""}
+                  </option>
+                );
+              })}
+            </select>
+            <span className="block text-[9.5px] text-slate-400 font-mono">Hold Ctrl/Cmd to select multiple. Fits are computed by matching developer skills to project PRD details.</span>
+          </label>
 
           <FormField label="Target Deadline" type="date" value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} />
 
@@ -2195,7 +2362,18 @@ function CreateProjectModal({ onClose, onDone, people, prdQueue }) {
 // Create User/Person Modal Component
 // ==========================================
 function CreatePersonModal({ role, onClose, onDone }) {
-  const [form, setForm] = useState({ name: "", email: "", password: "", company: "", capacity_hours: 40 });
+  const [form, setForm] = useState({ name: "", email: "", password: "", company: "", capacity_hours: 40, skills: [] });
+
+  const AVAILABLE_SKILLS = ["React", "TypeScript", "Next.js", "Python", "FastAPI", "Voice AI", "LLMs", "MongoDB", "PostgreSQL", "Docker"];
+
+  const handleToggleSkill = (skill) => {
+    setForm(prev => {
+      const nextSkills = prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill];
+      return { ...prev, skills: nextSkills };
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -2224,13 +2402,35 @@ function CreatePersonModal({ role, onClose, onDone }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5">
+        <form onSubmit={handleSubmit} className="space-y-3.5 max-h-[70vh] overflow-y-auto pr-1">
           <FormField label="Full Name" value={form.name} onChange={(v) => setForm({ ...form, name: v })} required />
           <FormField label="Work Email" type="email" value={form.email} onChange={(v) => setForm({ ...form, email: v })} required />
           <FormField label="Access Password" type="password" value={form.password} onChange={(v) => setForm({ ...form, password: v })} required />
           <FormField label="Company / Organisation" value={form.company} onChange={(v) => setForm({ ...form, company: v })} />
           {role === "DEVELOPER" && (
-            <FormField label="Bandwidth Limit (hours/week)" type="number" value={form.capacity_hours} onChange={(v) => setForm({ ...form, capacity_hours: parseInt(v) })} required />
+            <>
+              <FormField label="Bandwidth Limit (hours/week)" type="number" value={form.capacity_hours} onChange={(v) => setForm({ ...form, capacity_hours: parseInt(v) })} required />
+              
+              <div className="space-y-2">
+                <span className="block text-xs font-semibold text-[#050a1a]">Specialized Skills</span>
+                <div className="grid grid-cols-2 gap-2">
+                  {AVAILABLE_SKILLS.map((skill) => {
+                    const checked = form.skills.includes(skill);
+                    return (
+                      <label key={skill} className="flex items-center gap-2 rounded border p-2 bg-white/70 hover:bg-slate-50 cursor-pointer text-xs transition">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => handleToggleSkill(skill)}
+                          className="accent-[#2455FF] h-3.5 w-3.5 rounded"
+                        />
+                        <span>{skill}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
           )}
 
           <button
