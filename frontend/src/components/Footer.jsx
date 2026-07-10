@@ -124,16 +124,16 @@ export const Footer = () => {
       {/* Oversized background watermark */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center z-0">
         <motion.div
-          initial={{ opacity: 0.22 }}
-          animate={{ opacity: [0.22, 0.28, 0.22] }}
+          initial={{ opacity: 0.10 }}
+          animate={{ opacity: [0.10, 0.15, 0.10] }}
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          className="font-display text-[12vw] leading-none bg-gradient-to-b from-[#2455FF] via-[#2455FF] to-transparent bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_24px_rgba(36,85,255,0.06)] filter blur-[0.4px] inline-block"
+          className="font-display text-[14vw] leading-none bg-gradient-to-b from-[#2455FF] via-[#2455FF] to-transparent bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_24px_rgba(36,85,255,0.06)] filter blur-[0.4px] inline-block"
         >
           LUMI AI
         </motion.div>
       </div>
 
-      <div className="max-w-[1240px] mx-auto px-6 relative z-10">
+      <div className="max-w-[1680px] mx-auto px-8 sm:px-12 md:px-16 relative z-10">
         {/* Main Footer Link Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-6 text-left pb-6">
           
