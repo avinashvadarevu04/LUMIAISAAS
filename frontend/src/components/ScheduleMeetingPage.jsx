@@ -22,7 +22,6 @@ import {
 import { toast } from "sonner";
 import Navbar from "./Navbar";
 import { useUser } from "@/lib/userStore";
-import Footer from "./Footer";
 
 const DISCUSSION_TOPICS = [
   "AI Chatbot",
@@ -213,10 +212,25 @@ export const ScheduleMeetingPage = () => {
       <div className="absolute inset-0 bp-grid pointer-events-none opacity-30" aria-hidden="true" />
       <div className="absolute inset-0 bp-wash pointer-events-none" aria-hidden="true" />
 
-      <Navbar user={user} onLoginClick={() => navigate("/admin/login")} onLogout={logout} />
+      {/* Focused Booking Header */}
+      <header className="w-full max-w-4xl mx-auto px-6 py-5 flex items-center justify-between relative z-50">
+        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+          <span className="font-display text-[20px] tracking-[0.08em] text-[#050a1a] leading-none font-black">
+            LUMI&nbsp;<span className="text-[#2455FF]">AI</span>
+          </span>
+          <span className="h-1.5 w-1.5 rounded-full bg-[#00E5FF] animate-pulse" />
+        </div>
+        <button
+          onClick={() => navigate("/")}
+          className="group inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#2455FF]/15 bg-white/50 hover:bg-[#2455FF]/5 text-xs font-semibold text-slate-700 transition"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to Home
+        </button>
+      </header>
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-6 pt-32 pb-24 relative z-10 flex flex-col justify-center">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-6 pt-6 pb-12 relative z-10 flex flex-col justify-center">
         <AnimatePresence mode="wait">
           {!submitted ? (
             <motion.div
@@ -863,7 +877,6 @@ export const ScheduleMeetingPage = () => {
         </AnimatePresence>
       </main>
 
-      <Footer />
     </div>
   );
 };

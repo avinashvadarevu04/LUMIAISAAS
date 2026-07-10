@@ -291,7 +291,7 @@ export const Hero = () => {
     toast("Signed out.", { description: "See you in the lab.", duration: 2400 });
   };
 
-  const onBookCall = () => openBook();
+  const onBookCall = () => navigate("/schedule-meeting");
 
   return (
     <div className="relative w-full bg-white min-h-screen">

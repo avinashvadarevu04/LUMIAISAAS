@@ -85,7 +85,7 @@ export const Footer = () => {
   ];
 
   return (
-    <footer className="relative w-full bg-white/80 border-t border-[#2455FF]/18 overflow-hidden pt-20 pb-8 z-30 font-sans">
+    <footer className="relative w-full bg-white/80 border-t border-[#2455FF]/18 overflow-hidden pt-12 pb-6 z-30 font-sans">
       {/* Top glowing blue border/divider line */}
       <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#2455FF]/40 to-transparent shadow-[0_-4px_20px_rgba(36,85,255,0.4)]" />
 
@@ -123,17 +123,17 @@ export const Footer = () => {
 
       {/* Oversized background watermark */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center z-0">
-        <span className="font-display text-[16vw] leading-none bg-gradient-to-r from-[#2455FF]/14 via-[#4f7bff]/10 to-[#00e5ff]/14 bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_18px_rgba(36,85,255,0.08)] filter blur-[0.3px]">
+        <span className="font-display text-[12vw] leading-none bg-gradient-to-r from-[#2455FF]/14 via-[#4f7bff]/10 to-[#00e5ff]/14 bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_18px_rgba(36,85,255,0.08)] filter blur-[0.3px]">
           LUMI AI
         </span>
       </div>
 
       <div className="max-w-[1240px] mx-auto px-6 relative z-10">
         {/* Main Footer Link Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-6 text-left pb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-6 text-left pb-6">
           
           {/* Logo & About Column */}
-          <div className="lg:col-span-1 flex flex-col space-y-5">
+          <div className="lg:col-span-1 flex flex-col space-y-3.5">
             <div>
               <div className="flex items-center gap-2">
                 <span className="font-display text-[28px] tracking-[0.08em] text-[#050a1a] leading-none font-black">
@@ -339,7 +339,7 @@ export const Footer = () => {
         </div>
 
         {/* Mid bar for Social Icons & App Downloads */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-t border-b border-[#2455FF]/10 py-6 mb-8 text-left">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 border-t border-b border-[#2455FF]/10 py-4 mb-4 text-left">
           
           {/* Circular social icons with rich micro-interactions */}
           <div className="flex items-center gap-3">
