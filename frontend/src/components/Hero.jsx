@@ -512,73 +512,49 @@ export const Hero = () => {
           </motion.div>
 
           {/* ===== AI Command bar ===== */}
-          <motion.form
+          {/* ===== Schedule Discovery Call Card ===== */}
+          <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75, duration: 0.7 }}
-            onSubmit={handleSubmit}
             className="relative mt-10 w-full max-w-[760px] bracket"
-            data-testid="ai-command-bar"
+            data-testid="schedule-discovery-card"
           >
-            <div className="glass-strong rounded-2xl p-2 pl-4 flex items-center gap-3">
-              {/* Status dot + label */}
-              <div className="hidden sm:flex items-center gap-2 pr-3 border-r border-[#2455FF]/15">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-[#00E5FF] opacity-75 animate-ping" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2455FF]" />
-                </span>
-                <span className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#050a1a]/60">
-                  lumi://lab
-                </span>
+            <div className="glass-strong rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 text-left relative z-10">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-cine text-2xl tracking-[0.08em] text-[#050a1a] font-bold">
+                  Schedule a Free Discovery Call
+                </h3>
+                <p className="mt-1.5 text-[13.5px] text-[#050a1a]/60 leading-relaxed">
+                  Meet our AI experts to discuss your idea before we start building.
+                </p>
               </div>
-
-              {/* Input + cycling placeholder */}
-              <div className="relative flex-1 min-w-0">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  className="w-full bg-transparent outline-none font-mono text-[14.5px] text-[#050a1a] placeholder-transparent caret-[#2455FF] py-2"
-                  placeholder="Describe your AI"
-                  aria-label="Describe what you want to build"
-                  data-testid="ai-command-input"
-                />
-                {!input && (
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-y-0 left-0 right-2 flex items-center font-mono text-[14.5px] text-[#050a1a]/55 overflow-hidden whitespace-nowrap"
-                  >
-                    <span className="text-[#2455FF] mr-2 shrink-0">{">"}</span>
-                    <span className="truncate">{placeholder}</span>
-                    <span className="caret shrink-0" />
-                  </div>
-                )}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => navigate("/schedule-meeting")}
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] transition-colors text-white px-5 py-3 text-[14px] font-semibold shadow-md whitespace-nowrap"
+                >
+                  📅 Schedule Meeting
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById("hero-metrics");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#2455FF]/20 hover:bg-[#2455FF]/5 transition-colors text-[#2455FF] px-5 py-3 text-[14px] font-semibold whitespace-nowrap"
+                >
+                  Learn More
+                </button>
               </div>
-
-              {/* Submit */}
-              <button
-                type="submit"
-                data-testid="ai-command-submit"
-                className="group inline-flex items-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] transition-colors text-white px-4 py-2.5 text-[13px] font-semibold"
-              >
-                <span className="hidden sm:inline">Run</span>
-                <CornerDownLeft className="h-4 w-4" strokeWidth={2.5} />
-              </button>
             </div>
 
             {/* Scanline */}
-            <div className="absolute inset-x-2 top-0 h-px overflow-hidden rounded-full pointer-events-none">
+            <div className="absolute inset-x-2 top-0 h-px overflow-hidden rounded-full pointer-events-none z-20">
               <div className="h-full w-1/3 bg-gradient-to-r from-transparent via-[#00E5FF] to-transparent scanline" />
             </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 font-mono text-[10.5px] uppercase tracking-[0.22em] text-[#050a1a]/45">
-              <span>Press</span>
-              <kbd className="px-1.5 py-0.5 rounded border border-[#2455FF]/25 bg-white/70 text-[#2455FF]">
-                Enter
-              </kbd>
-              <span>to enter the lab</span>
-            </div>
-          </motion.form>
+          </motion.div>
 
           {/* ===== Metrics ===== */}
           <motion.div

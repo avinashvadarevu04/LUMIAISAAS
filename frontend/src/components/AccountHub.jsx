@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { useUser } from "@/lib/userStore";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
+import { SHOW_AI_INFRA } from "../config";
 import {
   LayoutDashboard,
   User,
@@ -463,13 +464,15 @@ const AccountHub = () => {
                       <span>Check SOW Project Hub</span>
                       <Briefcase className="h-3.5 w-3.5" />
                     </button>
-                    <button
-                      onClick={() => navigate("/ai-infra")}
-                      className="w-full py-2.5 px-3 rounded-xl bg-[#2455FF]/5 border border-[#2455FF]/15 hover:bg-[#2455FF]/10 text-xs font-mono text-[#2455FF] uppercase tracking-wider font-semibold transition text-left flex items-center justify-between"
-                    >
-                      <span>Infra Services Marketplace</span>
-                      <Database className="h-3.5 w-3.5" />
-                    </button>
+                    {SHOW_AI_INFRA && (
+                      <button
+                        onClick={() => navigate("/ai-infra")}
+                        className="w-full py-2.5 px-3 rounded-xl bg-[#2455FF]/5 border border-[#2455FF]/15 hover:bg-[#2455FF]/10 text-xs font-mono text-[#2455FF] uppercase tracking-wider font-semibold transition text-left flex items-center justify-between"
+                      >
+                        <span>Infra Services Marketplace</span>
+                        <Database className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -489,15 +492,17 @@ const AccountHub = () => {
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
-                      <div>
-                        <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT BETA</span>
-                        <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Verify dynamic GPU nodes metrics</div>
+                    {SHOW_AI_INFRA && (
+                      <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-100 dark:border-white/5">
+                        <div>
+                          <span className="font-mono text-[8px] bg-[#2455FF]/10 text-[#2455FF] px-2 py-0.5 rounded font-bold uppercase tracking-wider">PROJECT BETA</span>
+                          <div className="font-semibold text-xs text-[#050a1a] dark:text-white mt-1">Verify dynamic GPU nodes metrics</div>
+                        </div>
+                        <button onClick={() => navigate("/ai-infra")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
+                          <ArrowRight className="h-3.5 w-3.5" />
+                        </button>
                       </div>
-                      <button onClick={() => navigate("/ai-infra")} className="p-1.5 rounded-lg bg-[#2455FF] hover:bg-[#1a44e0] text-white transition">
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    )}
                   </div>
                 </div>
 

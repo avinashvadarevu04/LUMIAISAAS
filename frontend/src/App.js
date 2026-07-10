@@ -8,6 +8,7 @@ import AIInfraPage from "@/components/AIInfraPage";
 import CommandPalette from "@/components/CommandPalette";
 import AccountHub from "@/components/AccountHub";
 import AdminLogin from "@/components/AdminLogin";
+import ScheduleMeetingPage from "@/components/ScheduleMeetingPage";
 
 function App() {
   return (
@@ -36,6 +37,7 @@ function App() {
           <Route path="/dashboard" element={<ManagementDashboard isAdminOnly={false} />} />
           <Route path="/ai-infra" element={<AIInfraPage />} />
           <Route path="/account" element={<AccountHub />} />
+          <Route path="/schedule-meeting" element={<ScheduleMeetingPage />} />
         </Routes>
       </BrowserRouter>
     </div>

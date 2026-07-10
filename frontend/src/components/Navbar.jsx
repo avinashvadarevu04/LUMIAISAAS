@@ -15,6 +15,7 @@ import {
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import { SHOW_AI_INFRA } from "../config";
 
 const NAV_ITEMS = [
   { label: "About", href: "/#about" },
@@ -52,6 +53,9 @@ const Avatar = ({ user, size = "h-8 w-8", textClass = "text-[12px]" }) => {
 };
 
 export const Navbar = ({ user, onLoginClick, onLogout }) => {
+  const filteredNavItems = NAV_ITEMS.filter(
+    (item) => item.label !== "AI Infra" || SHOW_AI_INFRA
+  );
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -202,7 +206,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
             className="hidden lg:flex items-center gap-1 mx-auto"
             data-testid="navbar-links"
           >
-            {NAV_ITEMS.map((item) => (
+            {filteredNavItems.map((item) => (
               <a
                 key={item.label}
                 href={item.href}
@@ -343,7 +347,7 @@ export const Navbar = ({ user, onLoginClick, onLogout }) => {
               data-testid="navbar-mobile-drawer"
             >
               <div className="flex flex-col gap-1">
-                {NAV_ITEMS.map((item) => (
+                {filteredNavItems.map((item) => (
                   <a
                     key={item.label}
                     href={item.href}

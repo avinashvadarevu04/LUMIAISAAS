@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Command } from "cmdk";
 import { Search, Terminal, Home, Code, Database, Sparkles, FileText } from "lucide-react";
+import { SHOW_AI_INFRA } from "../config";
 
 const CommandPalette = () => {
   const [open, setOpen] = useState(false);
@@ -57,13 +58,15 @@ const CommandPalette = () => {
             </div>
           </Command.Item>
 
-          <Command.Item onSelect={() => handleNavigate("/ai-infra")}>
-            <Database className="h-3.5 w-3.5 text-cyan-500" />
-            <div className="flex-1 flex justify-between items-center">
-              <span>Go to Cloud GPU Infrastructure Marketplace</span>
-              <span className="font-mono text-[9px] opacity-45">/ai-infra</span>
-            </div>
-          </Command.Item>
+          {SHOW_AI_INFRA && (
+            <Command.Item onSelect={() => handleNavigate("/ai-infra")}>
+              <Database className="h-3.5 w-3.5 text-cyan-500" />
+              <div className="flex-1 flex justify-between items-center">
+                <span>Go to Cloud GPU Infrastructure Marketplace</span>
+                <span className="font-mono text-[9px] opacity-45">/ai-infra</span>
+              </div>
+            </Command.Item>
+          )}
 
           <Command.Item onSelect={() => handleNavigate("/dashboard")}>
             <Code className="h-3.5 w-3.5 text-indigo-500" />
