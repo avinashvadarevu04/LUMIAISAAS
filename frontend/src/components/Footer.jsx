@@ -93,6 +93,34 @@ export const Footer = () => {
       <div className="absolute inset-0 bp-grid pointer-events-none opacity-20" aria-hidden="true" />
       <div className="absolute inset-0 bp-wash pointer-events-none" aria-hidden="true" />
 
+      {/* Background Neural Network/AI node graphic */}
+      <div className="absolute inset-0 pointer-events-none select-none z-0 flex items-center justify-center opacity-[0.035]">
+        <svg width="800" height="400" viewBox="0 0 800 400" fill="none" className="w-full max-w-[900px] h-auto">
+          <line x1="100" y1="200" x2="250" y2="100" stroke="#2455FF" strokeWidth="1.5" strokeDasharray="4 4" />
+          <line x1="100" y1="200" x2="250" y2="300" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="250" y1="100" x2="400" y2="100" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="250" y1="100" x2="400" y2="200" stroke="#2455FF" strokeWidth="1.5" strokeDasharray="3 3" />
+          <line x1="250" y1="300" x2="400" y2="200" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="250" y1="300" x2="400" y2="300" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="400" y1="100" x2="550" y2="100" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="400" y1="200" x2="550" y2="200" stroke="#2455FF" strokeWidth="1.5" strokeDasharray="4 4" />
+          <line x1="400" y1="300" x2="550" y2="300" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="550" y1="100" x2="700" y2="200" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="550" y1="200" x2="700" y2="200" stroke="#2455FF" strokeWidth="1.5" />
+          <line x1="550" y1="300" x2="700" y2="200" stroke="#2455FF" strokeWidth="1.5" strokeDasharray="2 2" />
+          <circle cx="100" cy="200" r="6" fill="#2455FF" />
+          <circle cx="250" cy="100" r="5" fill="#00E5FF" />
+          <circle cx="250" cy="300" r="5" fill="#2455FF" />
+          <circle cx="400" cy="100" r="7" fill="#2455FF" />
+          <circle cx="400" cy="200" r="6" fill="#00E5FF" />
+          <circle cx="400" cy="300" r="7" fill="#2455FF" />
+          <circle cx="550" cy="100" r="5" fill="#2455FF" />
+          <circle cx="550" cy="200" r="5" fill="#00E5FF" />
+          <circle cx="550" cy="300" r="5" fill="#2455FF" />
+          <circle cx="700" cy="200" r="6" fill="#2455FF" />
+        </svg>
+      </div>
+
       {/* Oversized background watermark */}
       <div className="absolute inset-0 pointer-events-none select-none overflow-hidden flex items-center justify-center z-0">
         <span className="font-display text-[16vw] leading-none bg-gradient-to-r from-[#2455FF]/14 via-[#4f7bff]/10 to-[#00e5ff]/14 bg-clip-text text-transparent font-black tracking-[0.22em] uppercase whitespace-nowrap select-none drop-shadow-[0_4px_18px_rgba(36,85,255,0.08)] filter blur-[0.3px]">
@@ -105,19 +133,28 @@ export const Footer = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-6 text-left pb-16">
           
           {/* Logo & About Column */}
-          <div className="lg:col-span-1 flex flex-col space-y-4">
+          <div className="lg:col-span-1 flex flex-col space-y-5">
             <div>
-              <span className="font-display text-2xl tracking-[0.06em] text-[#050a1a] leading-none font-bold">
-                LUMI&nbsp;<span className="text-[#2455FF]">AI</span>
-              </span>
-              <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-slate-400 mt-1">
+              <div className="flex items-center gap-2">
+                <span className="font-display text-[28px] tracking-[0.08em] text-[#050a1a] leading-none font-black">
+                  LUMI&nbsp;<span className="text-[#2455FF]">AI</span>
+                </span>
+                <span className="h-2 w-2 rounded-full bg-[#00E5FF] animate-pulse" />
+              </div>
+              <div className="font-mono text-[9.5px] uppercase tracking-[0.28em] text-slate-400 mt-1.5">
                 Lupus AI Labs
               </div>
             </div>
             
-            <p className="font-mono text-[10.5px] uppercase tracking-wider text-[#2455FF] font-semibold">
+            <p className="font-mono text-[11px] uppercase tracking-wider text-[#2455FF] font-bold">
               Engineering AI Solutions for the Future.
             </p>
+
+            <div className="p-3 bg-[#2455FF]/5 border-l-2 border-[#2455FF] rounded-r-xl">
+              <p className="text-[12.5px] text-[#050a1a] font-semibold leading-relaxed">
+                Building Enterprise AI, Voice Agents, Automation & Intelligent Software.
+              </p>
+            </div>
             
             <p className="text-[12px] text-slate-500 leading-relaxed font-sans">
               We build AI Agents, Enterprise Software, Voice AI, Automation, Custom SaaS Platforms, and Intelligent Infrastructure for startups and enterprises.
@@ -141,7 +178,8 @@ export const Footer = () => {
 
           {/* Quick Links Column */}
           <div className="flex flex-col space-y-4">
-            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2">
+            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2455FF]" />
               Company
             </h4>
             <ul className="space-y-2.5">
@@ -165,7 +203,8 @@ export const Footer = () => {
 
           {/* Solutions Column */}
           <div className="flex flex-col space-y-4">
-            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2">
+            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2455FF]" />
               Solutions
             </h4>
             <ul className="space-y-2.5">
@@ -196,7 +235,8 @@ export const Footer = () => {
 
           {/* Resources Column */}
           <div className="flex flex-col space-y-4">
-            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2">
+            <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2 flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2455FF]" />
               Resources
             </h4>
             <ul className="space-y-2.5">
@@ -222,7 +262,8 @@ export const Footer = () => {
           <div className="flex flex-col space-y-6">
             {/* Contact Details */}
             <div className="space-y-3">
-              <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2">
+              <h4 className="font-cine text-[16px] tracking-widest text-[#050a1a] font-bold border-b border-[#2455FF]/10 pb-2 flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#2455FF]" />
                 Contacts
               </h4>
               <div className="space-y-2 text-[12px] text-slate-600">
