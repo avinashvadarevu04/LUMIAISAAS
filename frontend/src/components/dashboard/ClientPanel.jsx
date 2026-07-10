@@ -67,6 +67,17 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
     return () => ws.close();
   }, [user]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("Payment verified! Milestone successfully approved via Stripe.", {
+        description: "Your payment was processed and milestone has been marked as approved."
+      });
+      window.history.replaceState({}, document.title, window.location.pathname);
+      loadData();
+    }
+  }, []);
+
   // Load documents
   useEffect(() => {
     if (activeTab === "prds" || activeTab === "sowViewer") {
@@ -126,6 +137,21 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
         toast.error("Comments are required to request a revision.");
         return;
       }
+      
+      if (action === "APPROVE_MILESTONE") {
+        toast.loading("Initiating Stripe Checkout...");
+        const res = await axios.post(`${process.env.REACT_APP_BACKEND_URL || "http://localhost:8000"}/api/billing/create-checkout-session`, {
+          milestone_id: milestoneId,
+          success_url: window.location.origin + "/dashboard?payment=success",
+          cancel_url: window.location.href
+        });
+        toast.dismiss();
+        if (res.data?.url) {
+          window.location.href = res.data.url;
+          return;
+        }
+      }
+      
       await api.post(`/milestones/${milestoneId}/client-decision`, {
         action,
         comments: reviewComments
@@ -135,6 +161,7 @@ export default function ClientPanel({ user, data, loadData, activeTab }) {
       setReviewComments("");
       loadData();
     } catch (err) {
+      toast.dismiss();
       toast.error(apiError(err));
     }
   };

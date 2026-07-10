@@ -213,11 +213,15 @@ class ChangeRequestIn(BaseModel):
 class ChangeRequestEstimateIn(BaseModel):
     estimation_hours: int
     estimation_notes: str
+    hourly_rate: Optional[float] = 50.0
 
 
 class ChangeRequestDecisionIn(BaseModel):
     approved: bool
     comments: str = ""
+    estimation_hours: Optional[int] = None
+    hourly_rate: Optional[float] = None
+    estimated_cost: Optional[float] = None
 
 
 class ConnectionManager:
@@ -1829,10 +1833,18 @@ Expires:
             raise HTTPException(404, "Change Request not found")
             
         status = "admin_approved" if payload.approved else "rejected"
+        
+        hours = payload.estimation_hours if payload.estimation_hours is not None else cr.get("estimation_hours", 0)
+        rate = payload.hourly_rate if payload.hourly_rate is not None else cr.get("hourly_rate", 50.0)
+        cost = payload.estimated_cost if payload.estimated_cost is not None else (hours * rate)
+        
         await db.change_requests.update_one({"id": cr_id}, {
             "$set": {
                 "status": status,
                 "admin_comments": payload.comments,
+                "estimation_hours": hours,
+                "hourly_rate": rate,
+                "estimated_cost": cost,
                 "updated_at": now()
             }
         })
@@ -1852,6 +1864,29 @@ Expires:
                 "updated_at": now()
             }
         })
+        
+        # Auto-adjust the project's Statement of Work (SOW) value upon client approval
+        if payload.approved:
+            sow = await db.documents.find_one({"project_id": cr.get("project_id"), "type": "SOW"})
+            if sow:
+                meta = sow.get("meta") or {}
+                current_cost = float(meta.get("cost") or 0.0)
+                current_value = float(meta.get("contract_value") or 0.0)
+                cr_cost = float(cr.get("estimated_cost") or (float(cr.get("estimation_hours", 0)) * float(cr.get("hourly_rate", 50.0))))
+                
+                meta["cost"] = current_cost + cr_cost
+                meta["contract_value"] = current_value + cr_cost
+                
+                # Also append to the body markdown
+                body = sow.get("body_markdown", "")
+                addition = f"\n\n## Change Order: {cr.get('title')}\n* **Hours:** {cr.get('estimation_hours', 0)}\n* **Cost Adjustment:** {cr_cost} {meta.get('currency', 'INR')}\n* **Description:** {cr.get('description')}\n"
+                new_body = body + addition
+                
+                await db.documents.update_one(
+                    {"id": sow["id"]},
+                    {"$set": {"meta": meta, "body_markdown": new_body, "updated_at": now()}}
+                )
+                
         await audit(user, f"CHANGE_REQUEST_CLIENT_{status.upper()}", "CHANGE_REQUEST", cr_id)
         return {"ok": True}
 

@@ -95,6 +95,9 @@ export const Admin = () => {
   const [bookings, setBookings] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [viewerPrd, setViewerPrd] = useState(null);
+  const [otpLogs, setOtpLogs] = useState([]);
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
 
   // try existing stored password
   useEffect(() => {
@@ -110,7 +113,7 @@ export const Admin = () => {
       sessionStorage.setItem(STORE_KEY, password);
       setPwd(password);
       setAuthed(true);
-      await Promise.all([loadStats(password), loadPrds(password), loadBookings(password)]);
+      await Promise.all([loadStats(password), loadPrds(password), loadBookings(password), loadOtpLogs(password)]);
     } catch (e) {
       if (!silent) toast.error("Wrong password.");
       sessionStorage.removeItem(STORE_KEY);
@@ -145,6 +148,36 @@ export const Admin = () => {
     }
   };
 
+  const loadOtpLogs = async (password = pwd) => {
+    try {
+      const res = await axios.get(`${API}/admin/otp-logs`, { params: { password } });
+      setOtpLogs(res.data || []);
+    } catch {
+      /* */
+    }
+  };
+
+  const handleSendTestOtp = async (e) => {
+    e.preventDefault();
+    if (!testPhone.trim()) return;
+    setSendingTest(true);
+    try {
+      const res = await axios.post(`${API}/admin/test-otp`, {
+        password: pwd,
+        phone: testPhone.trim()
+      });
+      toast.success(`Test OTP SMS successfully dispatched! Code: ${res.data.otp}`, {
+        description: `Twilio Message SID: ${res.data.sid}`
+      });
+      setTestPhone("");
+      loadOtpLogs();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || "Failed to send test OTP.");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const onLogin = async (e) => {
     e?.preventDefault?.();
     if (!pwdInput.trim()) return;
@@ -155,7 +188,7 @@ export const Admin = () => {
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadStats(), loadPrds(), loadBookings()]);
+    await Promise.all([loadStats(), loadPrds(), loadBookings(), loadOtpLogs()]);
     setRefreshing(false);
   };
 
@@ -372,6 +405,80 @@ export const Admin = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Twilio OTP Status Logs & Testing Gateway */}
+        <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Test Form */}
+          <div className="glass rounded-2xl p-5 ring-1 ring-[#2455FF]/15 space-y-4">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#2455FF]">
+              Twilio Gateway Check
+            </div>
+            <p className="text-[12px] text-slate-500">
+              Send a test verification SMS to any phone number to verify API SID, Token, and dispatch limits.
+            </p>
+            <form onSubmit={handleSendTestOtp} className="space-y-4">
+              <label className="block">
+                <span className="font-mono text-[9.5px] uppercase tracking-wider text-slate-400">Recipient Phone (with country code)</span>
+                <input
+                  type="text"
+                  placeholder="+919876543210"
+                  value={testPhone}
+                  onChange={(e) => setTestPhone(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl bg-white/70 ring-1 ring-[#2455FF]/15 focus:ring-[#2455FF]/40 outline-none px-3.5 py-2 text-xs font-mono text-[#050a1a]"
+                  required
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={sendingTest || !testPhone.trim()}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#2455FF] hover:bg-[#1a44e0] disabled:opacity-50 text-white px-4 py-2.5 text-xs font-semibold tracking-wider uppercase transition shadow-md"
+              >
+                {sendingTest ? "Sending..." : "Send Test SMS"}
+              </button>
+            </form>
+          </div>
+
+          {/* Logs Table */}
+          <div className="glass rounded-2xl p-5 ring-1 ring-[#2455FF]/15 lg:col-span-2 space-y-3">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.24em] text-[#2455FF]">
+              SMS Verification Activity Logs ({otpLogs.length})
+            </div>
+            
+            <div className="overflow-y-auto max-h-[220px] pr-1">
+              <table className="w-full text-left border-collapse text-slate-700">
+                <thead>
+                  <tr className="font-mono text-[9.5px] uppercase tracking-[0.2em] text-[#050a1a]/55 border-b border-[#2455FF]/10">
+                    <th className="py-2 pr-3">Event Action</th>
+                    <th className="py-2 pr-3">Target Details</th>
+                    <th className="py-2 pr-3">Dispatched Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {otpLogs.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center font-mono text-[10.5px] uppercase tracking-[0.2em] text-[#050a1a]/45">
+                        No SMS events logged.
+                      </td>
+                    </tr>
+                  )}
+                  {otpLogs.map((log, idx) => (
+                    <tr key={idx} className="border-t border-[#2455FF]/10 hover:bg-[#2455FF]/4">
+                      <td className="py-2 pr-3 text-[12px] font-semibold text-[#050a1a]">
+                        {log.action === "OTP_SENT_RESENT" ? "OTP Resent" : "OTP Sent"}
+                      </td>
+                      <td className="py-2 pr-3 text-[11.5px] font-mono text-[#050a1a]/70">
+                        {log.metadata?.phone || "—"}
+                      </td>
+                      <td className="py-2 pr-3 text-[11px] font-mono text-[#050a1a]/55">
+                        {new Date(log.createdAt).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 

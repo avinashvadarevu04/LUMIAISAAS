@@ -72,6 +72,16 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
   const [selectedCR, setSelectedCR] = useState(null);
   const [crForwardDevId, setCrForwardDevId] = useState("");
   const [crAdminComments, setCrAdminComments] = useState("");
+  const [calcHours, setCalcHours] = useState(0);
+  const [calcRate, setCalcRate] = useState(50.0);
+
+  useEffect(() => {
+    if (selectedCR) {
+      setCalcHours(selectedCR.estimation_hours || 0);
+      setCalcRate(selectedCR.hourly_rate || 50.0);
+      setCrAdminComments(selectedCR.admin_comments || "");
+    }
+  }, [selectedCR]);
 
   // Load Documents
   useEffect(() => {
@@ -828,7 +838,10 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
     try {
       await api.post(`/change-requests/${crId}/admin-decision`, {
         approved,
-        comments: crAdminComments
+        comments: crAdminComments,
+        estimation_hours: Number(calcHours),
+        hourly_rate: Number(calcRate),
+        estimated_cost: Number(calcHours) * Number(calcRate)
       });
       toast.success(approved ? "Approved change request" : "Rejected change request");
       setCrAdminComments("");
@@ -1583,16 +1596,56 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
                   {/* Step 3: Admin review estimation */}
                   {selectedCR.status === "dev_estimated" && (
                     <div className="rounded-xl border p-4 bg-slate-50 space-y-4">
-                      <div className="font-semibold text-[10px] uppercase text-slate-500 mb-2">Review Developer Estimation Details</div>
+                      <div className="font-semibold text-[10px] uppercase text-slate-500 mb-2">Review & Adjust Estimation Details</div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                         <div>
-                          <span className="block text-[10px] text-slate-400">Estimated Hours</span>
+                          <span className="block text-[10px] text-slate-400">Developer Estimated Hours</span>
                           <strong>{selectedCR.estimation_hours} Hours</strong>
                         </div>
                         <div>
                           <span className="block text-[10px] text-slate-400">Developer Notes</span>
                           <strong>"{selectedCR.estimation_notes}"</strong>
+                        </div>
+                      </div>
+
+                      {/* Interactive Cost Calculator */}
+                      <div className="border-t border-[#2455FF]/10 pt-3.5 space-y-3">
+                        <span className="block text-[10.5px] uppercase tracking-wider text-[#2455FF] font-mono">Commercial Cost Calculator</span>
+                        
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div className="space-y-1">
+                            <label className="block text-[10px] text-slate-500 font-mono">Billable Hours ({calcHours}h)</label>
+                            <input
+                              type="range"
+                              min="0"
+                              max="300"
+                              value={calcHours}
+                              onChange={(e) => setCalcHours(Number(e.target.value))}
+                              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2455FF]"
+                            />
+                            <input
+                              type="number"
+                              value={calcHours}
+                              onChange={(e) => setCalcHours(Number(e.target.value))}
+                              className="w-full rounded border p-1 text-[11px] font-mono text-[#050a1a] bg-white mt-1"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-[10px] text-slate-500 font-mono">Hourly Rate (per Hour)</label>
+                            <input
+                              type="number"
+                              value={calcRate}
+                              onChange={(e) => setCalcRate(Number(e.target.value))}
+                              className="w-full rounded border p-1 text-[11px] font-mono text-[#050a1a] bg-white mt-5"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="bg-[#2455FF]/5 rounded-xl p-3 flex justify-between items-center text-xs font-mono border border-[#2455FF]/15">
+                          <span className="text-slate-550 font-medium">Calculated Target Scope Cost:</span>
+                          <span className="text-[#2455FF] font-bold text-sm">{money(calcHours * calcRate)}</span>
                         </div>
                       </div>
 
@@ -1609,13 +1662,13 @@ export default function AdminPanel({ user, data, loadData, activeTab }) {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleCRAdminDecision(selectedCR.id, true)}
-                          className="rounded-xl bg-emerald-600 text-white px-4 py-2.5 text-xs font-semibold hover:bg-emerald-700"
+                          className="rounded-xl bg-emerald-650 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 text-xs font-semibold transition"
                         >
                           Approve Estimation & Send to Client
                         </button>
                         <button
                           onClick={() => handleCRAdminDecision(selectedCR.id, false)}
-                          className="rounded-xl border border-rose-500/20 bg-rose-50 hover:bg-rose-100/50 text-rose-700 px-4 py-2.5 text-xs font-semibold"
+                          className="rounded-xl border border-rose-500/20 bg-rose-50 hover:bg-rose-100/50 text-rose-700 px-4 py-2.5 text-xs font-semibold transition"
                         >
                           Reject Request
                         </button>

@@ -1,5 +1,5 @@
 # pyrefly: ignore [missing-import]
-from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, APIRouter, HTTPException, UploadFile, File, Form, Request
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -9,6 +9,7 @@ import json
 import asyncio
 import base64
 import logging
+import random
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional, Dict, Any
@@ -19,6 +20,7 @@ import resend
 import bcrypt
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from management import create_management_router
+from stripe_helper import create_stripe_session
 
 
 ROOT_DIR = Path(__file__).parent
@@ -183,6 +185,17 @@ class Subscriber(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: str
     subscribed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class CheckoutSessionIn(BaseModel):
+    milestone_id: str
+    success_url: str
+    cancel_url: str
+
+
+class TestOtpIn(BaseModel):
+    password: str
+    phone: str
 
 
 # ============================================================
@@ -1156,6 +1169,106 @@ async def get_latest_otp():
         "otp": otp_data.get("otp_test_bypass"),
         "expiresAt": otp_data.get("expiresAt")
     }
+
+
+@api_router.post("/billing/create-checkout-session")
+async def create_checkout_session(payload: CheckoutSessionIn):
+    milestone = await db.milestones.find_one({"id": payload.milestone_id}, {"_id": 0})
+    if not milestone:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+        
+    project = await db.projects.find_one({"id": milestone["projectId"]}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+        
+    client_user = await db.users.find_one({"id": project["clientId"]}, {"_id": 0})
+    client_email = client_user.get("email") if client_user else "client@example.com"
+    
+    invoice = await db.invoices.find_one({"projectId": milestone["projectId"]})
+    amount = float(invoice.get("amount") or 1500.0) if invoice else 1500.0
+    currency = invoice.get("currency") or "INR"
+    
+    checkout_url = create_stripe_session(
+        milestone_id=payload.milestone_id,
+        amount=amount,
+        currency=currency,
+        project_name=project.get("name", "Project Deliverables"),
+        client_email=client_email,
+        success_url=payload.success_url,
+        cancel_url=payload.cancel_url
+    )
+    return {"url": checkout_url}
+
+
+@api_router.post("/billing/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    endpoint_secret = os.environ.get("STRIPE_WEBHOOK_SECRET")
+    
+    import stripe
+    event = None
+    try:
+        if endpoint_secret and sig_header:
+            event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        else:
+            event = stripe.Event.construct_from(json.loads(payload.decode("utf-8")), stripe.api_key)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        metadata = session.get("metadata") or {}
+        milestone_id = metadata.get("milestone_id")
+        if milestone_id:
+            # 1. Update milestone status
+            await db.milestones.update_one(
+                {"id": milestone_id},
+                {"$set": {"status": "CLIENT_APPROVED", "updatedAt": datetime.now(timezone.utc).isoformat()}}
+            )
+            # 2. Add activity log
+            await db.activity_logs.insert_one({
+                "id": str(uuid.uuid4()),
+                "action": "MILESTONE_STRIPE_PAYMENT_SUCCESS",
+                "entityType": "MILESTONE",
+                "entityId": milestone_id,
+                "createdAt": datetime.now(timezone.utc).isoformat()
+            })
+    return {"status": "success"}
+
+
+@api_router.get("/admin/otp-logs")
+async def admin_otp_logs(password: str):
+    _require_admin(password)
+    rows = await db.activity_logs.find(
+        {"action": {"$in": ["OTP_SENT", "OTP_SENT_RESENT"]}},
+        {"_id": 0}
+    ).sort("createdAt", -1).to_list(100)
+    return rows
+
+
+@api_router.post("/admin/test-otp")
+async def admin_test_otp(payload: TestOtpIn):
+    _require_admin(payload.password)
+    otp = f"{random.randint(100000, 999999)}"
+    twilio_sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    twilio_token = os.environ.get("TWILIO_AUTH_TOKEN")
+    twilio_phone = os.environ.get("TWILIO_PHONE_NUMBER")
+    if not (twilio_sid and twilio_token and twilio_phone):
+        raise HTTPException(status_code=400, detail="Twilio credentials are not configured.")
+        
+    try:
+        from twilio.rest import Client
+        client = Client(twilio_sid, twilio_token)
+        message = await asyncio.to_thread(
+            client.messages.create,
+            body=f"[LUMI AI] Admin Twilio SMS Connection Test. Verification Code: {otp}",
+            from_=twilio_phone,
+            to=payload.phone
+        )
+        return {"ok": True, "sid": message.sid, "otp": otp}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================
